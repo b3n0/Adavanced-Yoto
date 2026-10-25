@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-10-25
+
 ### Fixed
 
 - The night-light colour feature declares its minimum and maximum, so Gladys can register the player.
@@ -48,7 +50,8 @@ the notes of the version's GitHub Release.
 - Demo devices shipped by the Gladys integration template (weather station,
   switch, light, plug, motion sensor, camera, widget).
 
-[Unreleased]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.4...HEAD
+[Unreleased]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.5...HEAD
+[1.0.5]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.1...v1.0.2
