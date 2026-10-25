@@ -10,6 +10,10 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Fixed
+
+- The night-light colour feature declares its minimum and maximum, so Gladys can register the player.
+
 ## [1.0.4] - 2026-10-25
 
 ### Changed

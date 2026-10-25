@@ -123,6 +123,10 @@ export const yotoPlayer = {
           key: FEATURE.COLOR,
           category: DEVICE_FEATURE_CATEGORIES.LIGHT,
           type: DEVICE_FEATURE_TYPES.LIGHT.COLOR,
+          // Gladys rejects a feature whose min or max is null. A colour is the
+          // 24-bit integer 0x000000–0xffffff.
+          min: 0,
+          max: 0xffffff,
         }),
         feature(ids, {
           name: 'Luminosité de la veilleuse',

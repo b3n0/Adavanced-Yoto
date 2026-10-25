@@ -62,7 +62,9 @@ test('a player declares the Yoto features Gladys can address', () => {
     byType(DEVICE_FEATURE_CATEGORIES.LIGHT, DEVICE_FEATURE_TYPES.LIGHT.BINARY).length,
     1,
   );
-  assert.equal(byType(DEVICE_FEATURE_CATEGORIES.LIGHT, DEVICE_FEATURE_TYPES.LIGHT.COLOR).length, 1);
+  const color = byType(DEVICE_FEATURE_CATEGORIES.LIGHT, DEVICE_FEATURE_TYPES.LIGHT.COLOR)[0];
+  assert.equal(color.min, 0);
+  assert.equal(color.max, 0xffffff);
   assert.equal(
     byType(DEVICE_FEATURE_CATEGORIES.LIGHT, DEVICE_FEATURE_TYPES.LIGHT.BRIGHTNESS).length,
     1,
