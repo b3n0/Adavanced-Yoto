@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-25
+
 ### Changed
 
 - The configuration screen explains how to link the Yoto account in plain language.
@@ -30,5 +32,6 @@ the notes of the version's GitHub Release.
 - Demo devices shipped by the Gladys integration template (weather station,
   switch, light, plug, motion sensor, camera, widget).
 
-[Unreleased]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/b3n0/Adavanced-Yoto/releases/tag/v1.0.1
