@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-25
+
 ### Added
 
 - Yoto Player devices in Gladys: night light (switch, colour, brightness),
@@ -24,4 +26,5 @@ the notes of the version's GitHub Release.
 - Demo devices shipped by the Gladys integration template (weather station,
   switch, light, plug, motion sensor, camera, widget).
 
-[Unreleased]: https://github.com/b3n0/Adavanced-Yoto/commits/main
+[Unreleased]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/b3n0/Adavanced-Yoto/releases/tag/v1.0.1
