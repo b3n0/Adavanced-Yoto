@@ -32,12 +32,13 @@ pushing.
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
-src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/yoto-auth.js                  OAuth2 device-code flow and refresh-token renewal
+src/yoto-session.js               single in-flight access-token renewal
+src/yoto-client.js                Yoto REST client (Bearer token, never logged)
+src/devices/index.js              registry of the device blueprints + poll dispatch
+src/devices/yotoPlayer.js         Yoto Player device (buildDevice, onPoll, onSetValue)
+src/scenes.js                     scene action: play a card
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
 docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
 test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)

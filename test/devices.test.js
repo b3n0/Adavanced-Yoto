@@ -4,247 +4,180 @@ import {
   DEVICE_FEATURE_CATEGORIES,
   DEVICE_FEATURE_TYPES,
   DEVICE_POLL_FREQUENCIES,
-  DEVICE_TRANSPORTS,
 } from '@gladysassistant/integration-sdk';
 import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
 import {
   DEVICE_BLUEPRINTS,
   buildDiscoveredDevices,
-  buildTransportEntries,
   createPoller,
   findBlueprintByDevice,
-  identifyDevice,
 } from '../src/devices/index.js';
-import { simulateLanSession } from '../src/devices/plug.js';
+import { FEATURE, resetPlayerRuntime, setKnownPlayers } from '../src/devices/yotoPlayer.js';
 import { normalizeConfig } from '../src/config.js';
 
-const gladys = createFakeGladys();
-const config = normalizeConfig();
+const config = normalizeConfig({ access_token: 'secret-token' });
+
+function seedPlayers() {
+  resetPlayerRuntime();
+  setKnownPlayers([
+    { deviceId: 'player-1', name: 'Chambre' },
+    { deviceId: 'player-2', name: 'Salon' },
+  ]);
+}
 
 test('every blueprint exposes the required shape', () => {
-  for (const bp of DEVICE_BLUEPRINTS) {
-    assert.equal(typeof bp.key, 'string', 'key must be a string');
-    assert.equal(typeof bp.deviceExternalId, 'function', 'deviceExternalId must be a function');
-    assert.equal(typeof bp.buildDevice, 'function', 'buildDevice must be a function');
+  for (const blueprint of DEVICE_BLUEPRINTS) {
+    assert.equal(typeof blueprint.key, 'string');
+    assert.equal(typeof blueprint.deviceExternalId, 'function');
+    assert.equal(typeof blueprint.ownsDevice, 'function');
+    assert.equal(typeof blueprint.buildDevice, 'function');
   }
 });
 
-test('buildDiscoveredDevices returns one payload per blueprint', () => {
-  const devices = buildDiscoveredDevices(gladys, config);
-  assert.equal(devices.length, DEVICE_BLUEPRINTS.length);
-  for (const device of devices) {
-    assert.equal(typeof device.name, 'string');
-    assert.ok(device.external_id, 'each device has an external_id');
-    assert.ok(Array.isArray(device.features) && device.features.length > 0);
-  }
+test('buildDiscoveredDevices returns one payload per player', () => {
+  seedPlayers();
+  const gladys = createFakeGladys();
+  const devices = buildDiscoveredDevices(gladys);
+  assert.equal(devices.length, 2);
+  assert.deepEqual(
+    devices.map((device) => device.name),
+    ['Chambre', 'Salon'],
+  );
 });
 
 test('Gladys accepts the discovery payload', async () => {
-  // The SDK fake checks the payload like the host API does: external_id
-  // prefix, known category/type/unit, poll_frequency... A refusal is a 400
-  // for the WHOLE list, so no device would show up in the Discovery tab.
-  const fresh = createFakeGladys();
-  await fresh.publishDiscoveredDevices(buildDiscoveredDevices(fresh, config));
-  assert.equal(fresh.fake.discoveredDevices.length, DEVICE_BLUEPRINTS.length);
+  seedPlayers();
+  const gladys = createFakeGladys();
+  await gladys.publishDiscoveredDevices(buildDiscoveredDevices(gladys));
+  assert.equal(gladys.fake.discoveredDevices.length, 2);
 });
 
-test('Gladys polls exactly the devices that implement onPoll', () => {
-  // A device carrying a `poll_frequency` is polled: a recent core sets
-  // `should_poll: true` on it by itself, an older one needs it explicit, and
-  // an explicit `should_poll: false` is never polled on either.
-  const frequencies = Object.values(DEVICE_POLL_FREQUENCIES);
-  for (const bp of DEVICE_BLUEPRINTS) {
-    const device = bp.buildDevice(gladys, config);
-    if (typeof bp.onPoll === 'function') {
-      assert.ok(frequencies.includes(device.poll_frequency), `${bp.key}: invalid poll_frequency`);
-      assert.equal(
-        device.should_poll,
-        true,
-        `${bp.key}: the older cores poll only with should_poll`,
-      );
-    } else {
-      assert.ok(
-        device.poll_frequency === undefined || device.should_poll === false,
-        `${bp.key}: polled for nothing`,
-      );
-    }
-  }
+test('a player declares the Yoto features Gladys can address', () => {
+  seedPlayers();
+  const gladys = createFakeGladys();
+  const device = buildDiscoveredDevices(gladys)[0];
+  const byType = (category, type) =>
+    device.features.filter((item) => item.category === category && item.type === type);
+  assert.equal(
+    byType(DEVICE_FEATURE_CATEGORIES.LIGHT, DEVICE_FEATURE_TYPES.LIGHT.BINARY).length,
+    1,
+  );
+  assert.equal(byType(DEVICE_FEATURE_CATEGORIES.LIGHT, DEVICE_FEATURE_TYPES.LIGHT.COLOR).length, 1);
+  assert.equal(
+    byType(DEVICE_FEATURE_CATEGORIES.LIGHT, DEVICE_FEATURE_TYPES.LIGHT.BRIGHTNESS).length,
+    1,
+  );
+  assert.equal(
+    byType(DEVICE_FEATURE_CATEGORIES.MUSIC, DEVICE_FEATURE_TYPES.MUSIC.VOLUME).length,
+    3,
+  );
+  const battery = byType(
+    DEVICE_FEATURE_CATEGORIES.BATTERY,
+    DEVICE_FEATURE_TYPES.BATTERY.INTEGER,
+  )[0];
+  assert.equal(battery.read_only, true);
+  assert.equal(battery.min, 0);
+  assert.equal(battery.max, 100);
+  const limits = device.features.filter(
+    (item) =>
+      item.external_id.endsWith(FEATURE.VOLUME_LIMIT_DAY) ||
+      item.external_id.endsWith(FEATURE.VOLUME_LIMIT_NIGHT),
+  );
+  assert.equal(limits.length, 2);
+  assert.equal(device.should_poll, true);
+  assert.equal(device.poll_frequency, DEVICE_POLL_FREQUENCIES.EVERY_MINUTES);
 });
 
-test('the poller reads a device at the refresh interval of the config', async (t) => {
+test('device external_ids are unique and stable for a platform id', () => {
+  seedPlayers();
+  const gladys = createFakeGladys();
+  const devices = buildDiscoveredDevices(gladys);
+  const ids = devices.map((device) => device.external_id);
+  assert.equal(new Set(ids).size, ids.length);
+  const again = DEVICE_BLUEPRINTS[0].deviceExternalId(gladys, 'player-1');
+  assert.equal(again, devices[0].external_id);
+});
+
+test('findBlueprintByDevice routes a player and ignores anything else', () => {
+  seedPlayers();
+  const gladys = createFakeGladys();
+  const externalId = DEVICE_BLUEPRINTS[0].deviceExternalId(gladys, 'player-1');
+  assert.equal(findBlueprintByDevice(gladys, { external_id: externalId }), DEVICE_BLUEPRINTS[0]);
+  assert.equal(findBlueprintByDevice(gladys, { external_id: 'does-not-exist' }), undefined);
+});
+
+test('the poller reads a player at the refresh interval of the config', async (t) => {
   t.mock.timers.enable({ apis: ['Date'] });
-  const fresh = createFakeGladys();
+  seedPlayers();
+  const gladys = createFakeGladys();
   const pollDevice = createPoller();
-  const plug = {
-    external_id: DEVICE_BLUEPRINTS.find((bp) => bp.key === 'plug').deviceExternalId(fresh),
-  };
-  const everyFiveMinutes = normalizeConfig({ poll_frequency: 300 });
+  const player = { external_id: DEVICE_BLUEPRINTS[0].deviceExternalId(gladys, 'player-1') };
+  const everyFiveMinutes = normalizeConfig({ access_token: 'secret-token', poll_frequency: 300 });
+  t.mock.method(globalThis, 'fetch', async () => ({
+    ok: true,
+    status: 200,
+    text: async () =>
+      JSON.stringify({ device: { config: {}, status: { batteryLevelPercentage: 10 } } }),
+  }));
 
-  assert.equal(await pollDevice(fresh, plug, everyFiveMinutes), true, 'the first poll reads');
+  assert.equal(await pollDevice(gladys, player, everyFiveMinutes), true);
   for (let minute = 1; minute < 5; minute += 1) {
     t.mock.timers.tick(DEVICE_POLL_FREQUENCIES.EVERY_MINUTES);
     assert.equal(
-      await pollDevice(fresh, plug, everyFiveMinutes),
+      await pollDevice(gladys, player, everyFiveMinutes),
       false,
       `skipped at ${minute} min`,
     );
   }
-  // Gladys' tick may land a little early: the read is still due.
   t.mock.timers.tick(DEVICE_POLL_FREQUENCIES.EVERY_MINUTES - 50);
-  assert.equal(await pollDevice(fresh, plug, everyFiveMinutes), true, 'read again at 5 min');
+  assert.equal(await pollDevice(gladys, player, everyFiveMinutes), true);
 });
 
 test('the poller retries a failed read at the next poll', async (t) => {
   t.mock.timers.enable({ apis: ['Date'] });
+  seedPlayers();
+  const gladys = createFakeGladys();
   const pollDevice = createPoller();
-  const station = {
-    external_id: DEVICE_BLUEPRINTS.find((bp) => bp.key === 'weather-station').deviceExternalId(
-      gladys,
-    ),
-  };
+  const player = { external_id: DEVICE_BLUEPRINTS[0].deviceExternalId(gladys, 'player-1') };
+  let calls = 0;
   t.mock.method(globalThis, 'fetch', async () => {
-    throw new Error('network down');
+    calls += 1;
+    if (calls === 1) {
+      throw new Error('network down');
+    }
+    return {
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({ device: { config: {}, status: { batteryLevelPercentage: 42 } } }),
+    };
   });
-  await assert.rejects(pollDevice(gladys, station, config), /network down/);
 
-  globalThis.fetch.mock.mockImplementation(async () => ({
-    ok: true,
-    json: async () => ({ current: { temperature_2m: 21.4, relative_humidity_2m: 55 } }),
-  }));
+  await assert.rejects(pollDevice(gladys, player, config), /network down/);
   t.mock.timers.tick(DEVICE_POLL_FREQUENCIES.EVERY_MINUTES);
-  assert.equal(await pollDevice(gladys, station, config), true, 'not delayed by the failure');
-  assert.equal(gladys.fake.lastState(`${station.external_id}:temperature`), 21.4);
+  assert.equal(await pollDevice(gladys, player, config), true);
+  const batteryId = gladys.externalIds('yoto-player', 'player-1').feature(FEATURE.BATTERY);
+  assert.equal(gladys.fake.lastState(batteryId), 42);
 });
 
 test('the poller ignores a device that has nothing to poll', async () => {
+  const gladys = createFakeGladys();
   const pollDevice = createPoller();
-  const switchId = DEVICE_BLUEPRINTS.find((bp) => bp.key === 'switch').deviceExternalId(gladys);
-  assert.equal(await pollDevice(gladys, { external_id: switchId }, config), false);
   assert.equal(await pollDevice(gladys, { external_id: 'does-not-exist' }, config), false);
 });
 
-test('an idle plug publishes its 0 W once, then only as a heartbeat', async (t) => {
-  t.mock.timers.enable({ apis: ['Date'] });
-  const fresh = createFakeGladys();
-  const plug = DEVICE_BLUEPRINTS.find((bp) => bp.key === 'plug');
-  await plug.onPoll(fresh, config);
-  await plug.onPoll(fresh, config);
-  assert.equal(fresh.fake.states.length, 1, 'an unchanged value is not sent again');
-  t.mock.timers.tick(30 * 60 * 1000);
-  await plug.onPoll(fresh, config);
-  assert.equal(fresh.fake.states.length, 2, 're-sent after 30 minutes');
-});
-
-test('device external_ids are unique across the catalog', () => {
-  const devices = buildDiscoveredDevices(gladys, config);
-  const ids = devices.map((d) => d.external_id);
-  assert.equal(new Set(ids).size, ids.length, 'no two devices may share an external_id');
-});
-
-test('findBlueprintByDevice routes an external_id back to its owner blueprint', () => {
-  for (const bp of DEVICE_BLUEPRINTS) {
-    const external_id = bp.deviceExternalId(gladys);
-    const found = findBlueprintByDevice(gladys, { external_id });
-    assert.equal(found, bp);
-  }
-});
-
-test('findBlueprintByDevice returns undefined for an unknown device', () => {
-  const found = findBlueprintByDevice(gladys, { external_id: 'does-not-exist' });
-  assert.equal(found, undefined);
-});
-
-test('manifest action keys are unique across blueprints', () => {
-  const keys = DEVICE_BLUEPRINTS.flatMap((bp) => Object.keys(bp.actions ?? {}));
-  assert.equal(new Set(keys).size, keys.length, 'no two blueprints may register the same action');
-});
-
-test('the camera declares a camera/image feature', () => {
-  const cameraBlueprint = DEVICE_BLUEPRINTS.find((bp) => bp.key === 'camera');
-  const device = cameraBlueprint.buildDevice(gladys, config);
-  const imageFeature = device.features.find((f) => f.category === DEVICE_FEATURE_CATEGORIES.CAMERA);
-  assert.ok(imageFeature, 'the camera must carry a camera feature');
-  assert.equal(imageFeature.type, DEVICE_FEATURE_TYPES.CAMERA.IMAGE);
-  assert.equal(imageFeature.read_only, true);
-});
-
-test('onGetImage resolves a base64 JPEG under the 150 KB limit', async () => {
-  const cameraBlueprint = DEVICE_BLUEPRINTS.find((bp) => bp.key === 'camera');
-  const image = await cameraBlueprint.onGetImage(gladys, {
-    device: { external_id: cameraBlueprint.deviceExternalId(gladys) },
+test('test_connection reports how many players the token can see', async (t) => {
+  resetPlayerRuntime();
+  const gladys = createFakeGladys();
+  t.mock.method(globalThis, 'fetch', async () => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify({ devices: [{ deviceId: 'player-1', name: 'Chambre' }] }),
+  }));
+  const message = await DEVICE_BLUEPRINTS[0].actions.test_connection(gladys, {
+    fields: {},
     config,
   });
-  assert.match(image, /^image\/jpg;base64,/);
-  assert.ok(image.length <= 150 * 1024, 'the image must stay under 150 KB');
-});
-
-test('buildTransportEntries reports one valid entry per dual-channel device', () => {
-  const entries = buildTransportEntries(gladys, config);
-  assert.ok(entries.length > 0, 'the demo plug reports its transport');
-  const validValues = Object.values(DEVICE_TRANSPORTS);
-  for (const entry of entries) {
-    assert.ok(entry.external_id, 'each entry targets a device external_id');
-    assert.ok(validValues.includes(entry.transport), `invalid transport: ${entry.transport}`);
-  }
-});
-
-test('the demo plug honors the GLADYS_PREFER_LOCAL preference', () => {
-  const local = buildTransportEntries(gladys, normalizeConfig({ GLADYS_PREFER_LOCAL: true }));
-  const cloud = buildTransportEntries(gladys, normalizeConfig({ GLADYS_PREFER_LOCAL: false }));
-  const plugId = DEVICE_BLUEPRINTS.find((bp) => bp.key === 'plug').deviceExternalId(gladys);
-  assert.equal(local.find((e) => e.external_id === plugId).transport, DEVICE_TRANSPORTS.LOCAL);
-  assert.equal(cloud.find((e) => e.external_id === plugId).transport, DEVICE_TRANSPORTS.CLOUD);
-});
-
-test('nominal transport entries never carry a leftover degraded flag', () => {
-  const entries = buildTransportEntries(gladys, config);
-  for (const entry of entries) {
-    assert.equal(entry.degraded, undefined, 'nominal entries must clear the degraded state');
-  }
-});
-
-test('the plug reports a degraded cloud fallback when the LAN session is refused', () => {
-  const plugId = DEVICE_BLUEPRINTS.find((bp) => bp.key === 'plug').deviceExternalId(gladys);
-  simulateLanSession(false);
-  try {
-    const entries = buildTransportEntries(gladys, normalizeConfig({ GLADYS_PREFER_LOCAL: true }));
-    const entry = entries.find((e) => e.external_id === plugId);
-    assert.equal(entry.transport, DEVICE_TRANSPORTS.CLOUD, 'falls back to cloud');
-    assert.equal(entry.degraded, true, 'the fallback is flagged degraded');
-    assert.ok(entry.message.en, 'the reason carries at least the mandatory `en` text');
-    assert.ok(entry.message.en.length <= 200, 'tooltip messages are capped at 200 characters');
-  } finally {
-    simulateLanSession(true);
-  }
-});
-
-test('identifyDevice signals a device that implements identify', async () => {
-  const lightId = DEVICE_BLUEPRINTS.find((bp) => bp.key === 'light').deviceExternalId(gladys);
-  const message = await identifyDevice(gladys, lightId, config);
-  assert.match(message.en, /signalling/);
-  assert.ok(message.fr, 'the message is multi-language');
-});
-
-test('identifyDevice explains when the device has no way to signal itself', async () => {
-  const weatherId = DEVICE_BLUEPRINTS.find((bp) => bp.key === 'weather-station').deviceExternalId(
-    gladys,
-  );
-  const message = await identifyDevice(gladys, weatherId, config);
-  assert.match(message.en, /no way to signal/);
-});
-
-test('the test_weather action returns a multi-language message', async () => {
-  const realFetch = globalThis.fetch;
-  globalThis.fetch = async () => ({
-    ok: true,
-    json: async () => ({ current: { temperature_2m: 21.4, relative_humidity_2m: 55 } }),
-  });
-  try {
-    const weatherStation = DEVICE_BLUEPRINTS.find((bp) => bp.key === 'weather-station');
-    const message = await weatherStation.actions.test_weather(gladys, { fields: {}, config });
-    assert.match(message.en, /21\.4/);
-    assert.match(message.fr, /21\.4/);
-  } finally {
-    globalThis.fetch = realFetch;
-  }
+  assert.match(message.en, /1 Yoto player/);
+  assert.match(message.fr, /1 lecteur/);
 });

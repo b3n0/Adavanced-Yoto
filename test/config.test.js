@@ -6,28 +6,32 @@ test('normalizeConfig returns the defaults when called with no argument', () => 
   assert.deepEqual(normalizeConfig(), DEFAULT_CONFIG);
 });
 
-test('normalizeConfig keeps user values over the defaults', () => {
-  const config = normalizeConfig({ latitude: 45.5, longitude: -73.6, unit: 'fahrenheit' });
-  assert.equal(config.latitude, 45.5);
-  assert.equal(config.longitude, -73.6);
-  assert.equal(config.unit, 'fahrenheit');
-});
-
-test('normalizeConfig coerces numeric strings coming from a form', () => {
-  const config = normalizeConfig({ latitude: '48.8', longitude: '2.3', poll_frequency: '600' });
-  assert.equal(config.latitude, 48.8);
-  assert.equal(config.longitude, 2.3);
+test('normalizeConfig trims credentials and coerces the poll interval', () => {
+  const config = normalizeConfig({
+    client_id: '  app  ',
+    client_secret: '  secret  ',
+    access_token: '  abc  ',
+    refresh_token: '  refresh  ',
+    poll_frequency: '600',
+    token_expires_at: '1700000000000',
+  });
+  assert.equal(config.client_id, 'app');
+  assert.equal(config.client_secret, 'secret');
+  assert.equal(config.access_token, 'abc');
+  assert.equal(config.refresh_token, 'refresh');
+  assert.equal(config.token_expires_at, 1700000000000);
   assert.equal(config.poll_frequency, 600);
   assert.equal(typeof config.poll_frequency, 'number');
 });
 
-test('normalizeConfig falls back to the default for a missing numeric field', () => {
-  const config = normalizeConfig({ unit: 'celsius' });
+test('normalizeConfig falls back when the token or the interval is missing', () => {
+  const config = normalizeConfig({});
+  assert.equal(config.access_token, '');
+  assert.equal(config.refresh_token, '');
   assert.equal(config.poll_frequency, DEFAULT_CONFIG.poll_frequency);
 });
 
-test('GLADYS_PREFER_LOCAL defaults to true and only an explicit false disables it', () => {
-  assert.equal(normalizeConfig().GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: true }).GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: false }).GLADYS_PREFER_LOCAL, false);
+test('normalizeConfig drops a non-string token', () => {
+  assert.equal(normalizeConfig({ access_token: 12, client_secret: 4 }).access_token, '');
+  assert.equal(normalizeConfig({ client_secret: 4 }).client_secret, '');
 });

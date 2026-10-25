@@ -1,30 +1,22 @@
 // -----------------------------------------------------------------------------
 // Integration configuration.
 //
-// The configuration is filled in by the user in Gladys, from the `config_schema`
-// declared in `gladys-assistant-integration.json`. The SDK fetches it for you
-// (`gladys.getConfig()`) and notifies you of every change through
-// `gladys.onConfigUpdated()`.
-//
-// This module only provides defaults and normalizes the received object, so the
-// rest of the code never has to deal with `undefined`.
+// Filled in by the user in Gladys, from the `config_schema` of
+// `gladys-assistant-integration.json`. Defaults here MUST match the manifest
+// `default` values. The OAuth tokens are not form fields: the device-code
+// flow writes them with setConfig, outside the schema, and they survive a
+// restart. Empty strings mean "not linked yet".
 // -----------------------------------------------------------------------------
 
-// Defaults: they MUST stay consistent with the `default` values declared in the
-// `config_schema` of the manifest.
 export const DEFAULT_CONFIG = {
-  latitude: 48.8566, // Paris
-  longitude: 2.3522,
-  unit: 'celsius', // 'celsius' | 'fahrenheit'
-  // Seconds between two reads of the polled sensors. Gladys polls at most once
-  // a minute: slower intervals are applied by skipping polls (see
-  // createPoller in src/devices/index.js).
+  client_id: '',
+  client_secret: '',
+  access_token: '',
+  refresh_token: '',
+  token_expires_at: 0,
+  // Seconds between two reads. Gladys polls at most once a minute; slower
+  // intervals are applied by skipping polls (createPoller).
   poll_frequency: 300,
-  // Reserved key (NOT in config_schema): because the manifest declares both
-  // 'local' and 'cloud' in its `transports` field, Gladys shows a standard
-  // "Prefer the local connection" toggle and sends the user's choice here.
-  // Read-only for the integration; defaults to true.
-  GLADYS_PREFER_LOCAL: true,
 };
 
 /**
@@ -32,14 +24,19 @@ export const DEFAULT_CONFIG = {
  * @param {Record<string, unknown>} raw config returned by the SDK
  */
 export function normalizeConfig(raw = {}) {
+  const expires = Number(raw.token_expires_at ?? DEFAULT_CONFIG.token_expires_at);
   return {
     ...DEFAULT_CONFIG,
     ...raw,
-    // Force the types: config may arrive as strings from a form.
-    latitude: Number(raw.latitude ?? DEFAULT_CONFIG.latitude),
-    longitude: Number(raw.longitude ?? DEFAULT_CONFIG.longitude),
+    client_id: text(raw.client_id),
+    client_secret: text(raw.client_secret),
+    access_token: text(raw.access_token),
+    refresh_token: text(raw.refresh_token),
+    token_expires_at: Number.isFinite(expires) ? expires : 0,
     poll_frequency: Number(raw.poll_frequency ?? DEFAULT_CONFIG.poll_frequency),
-    // The preference is a boolean; anything but an explicit false means true.
-    GLADYS_PREFER_LOCAL: raw.GLADYS_PREFER_LOCAL !== false,
   };
+}
+
+function text(value) {
+  return typeof value === 'string' ? value.trim() : '';
 }

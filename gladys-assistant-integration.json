@@ -1,80 +1,71 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "Yoto Player Advanced",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Control a Yoto Player: night light, volume limits and cards.",
+    "fr": "Pilote un Yoto Player : veilleuse, volume et lecture de carte."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/b3n0/adavanced-yoto:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/b3n0/Adavanced-Yoto/main/cover.png",
+  "categories": ["lighting", "multimedia"],
+  "transports": ["cloud"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": { "en": "Yoto account", "fr": "Compte Yoto" },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "Create a Yoto developer application that allows the device-code grant, paste its client id, then link the account. The access token is renewed on its own with the refresh token. Sign in again only if you change the Yoto password or revoke the application.",
+        "fr": "Créez une application développeur Yoto qui autorise le flux device code, collez son client id, puis liez le compte. Le jeton d'accès se renouvelle seul grâce au jeton de rafraîchissement. Reconnectez-vous seulement si vous changez le mot de passe Yoto ou si vous révoquez l'application."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://yoto.dev/authentication/headless-cli-auth/",
+          "label": { "en": "Yoto device-code sign-in", "fr": "Connexion Yoto par code appareil" }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
+      "key": "client_id",
+      "type": "string",
+      "label": { "en": "Yoto client id", "fr": "Client id Yoto" },
       "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+        "en": "Client id of your Yoto developer application. The same one as Home Assistant works, with the family device scopes and offline_access.",
+        "fr": "Client id de votre application développeur Yoto. Celui de Home Assistant convient, avec les droits family des lecteurs et offline_access."
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "placeholder": {
+        "en": "From the Yoto developer dashboard",
+        "fr": "Depuis le portail développeur Yoto"
+      },
+      "required": true
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
+      "key": "client_secret",
+      "type": "secret",
+      "label": { "en": "Yoto client secret", "fr": "Secret client Yoto" },
       "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+        "en": "Only for a confidential application. Leave empty for a public device-code client. Never written to the logs.",
+        "fr": "Uniquement pour une application confidentielle. Laissez vide pour un client public en device code. Jamais écrit dans les logs."
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "required": false
     },
     {
-      "key": "unit",
-      "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
-      "required": false,
-      "default": "celsius",
-      "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
-      ]
+      "key": "account",
+      "type": "account_link",
+      "label": { "en": "Link my Yoto account", "fr": "Lier mon compte Yoto" }
     },
     {
       "key": "poll_frequency",
       "type": "number",
       "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "How often battery, volume and night-light state are read, in seconds (one minute minimum).",
+        "fr": "Fréquence de lecture de la batterie, du volume et de la veilleuse, en secondes (une minute minimum)."
       },
+      "placeholder": { "en": "e.g. 300", "fr": "ex. 300" },
       "required": false,
       "default": 300,
       "min": 60,
@@ -83,95 +74,60 @@
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
+      "key": "test_connection",
+      "label": { "en": "Test the Yoto connection", "fr": "Tester la connexion Yoto" },
       "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
-    }
-  ],
-  "scene_triggers": [
-    {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
-      "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
-      },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
-        },
-        {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
-          "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
-          ]
-        }
-      ],
-      "variables": [
-        {
-          "key": "target",
-          "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
-        }
-      ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
+      "key": "play_card",
+      "label": { "en": "Play a Yoto card", "fr": "Lire une carte Yoto" },
       "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+        "en": "Start a card on a Yoto player, from the first chapter.",
+        "fr": "Démarre une carte sur un Yoto Player, au premier chapitre."
       },
-      "timeout_seconds": 15,
+      "timeout_seconds": 20,
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": { "en": "Player", "fr": "Lecteur" },
           "required": true
+        },
+        {
+          "key": "card_id",
+          "type": "string",
+          "label": { "en": "Card id", "fr": "Identifiant de carte" },
+          "description": {
+            "en": "The Yoto card id, for example 5WsQg.",
+            "fr": "L'identifiant Yoto de la carte, par exemple 5WsQg."
+          },
+          "placeholder": { "en": "e.g. 5WsQg", "fr": "ex. 5WsQg" },
+          "required": true
+        },
+        {
+          "key": "track_index",
+          "type": "number",
+          "label": { "en": "Track index", "fr": "Index de la piste" },
+          "description": {
+            "en": "0 plays the first track of chapter 01.",
+            "fr": "0 lit la première piste du chapitre 01."
+          },
+          "required": false,
+          "default": 0,
+          "min": 0,
+          "max": 99
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
+          "key": "playing",
           "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "label": { "en": "Playback started", "fr": "Lecture démarrée" }
         }
       ]
-    }
-  ],
-  "widgets": [
-    {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
-      },
-      "icon": "activity",
-      "action_timeout_seconds": 15
     }
   ]
 }

@@ -1,67 +1,56 @@
-# Template de démonstration
+# Yoto Player Advanced
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+Cette intégration ajoute à Gladys Assistant chaque Yoto Player d'un compte
+Yoto : veilleuse, limites de volume, batterie, et lecture d'une carte depuis
+une scène.
 
 ## Ce que vous obtenez
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+Après la liaison du compte, chaque lecteur apparaît dans l'onglet
+**Découverte** :
+
+- **Veilleuse** — marche/arrêt et couleur de l'anneau lumineux pour le profil
+  en cours (jour ou nuit). L'arrêt envoie la couleur `#0` de Yoto.
+- **Luminosité** — luminosité de l'écran de ce même profil, de 0 à 100.
+  La valeur `auto` s'affiche comme 100 ; déplacer le curseur enregistre un
+  nombre fixe.
+- **Volume** — la molette du lecteur, de 0 à 16.
+- **Volume max jour** et **Volume max nuit** — les plafonds enregistrés sur
+  le lecteur.
+- **Batterie** — pourcentage en lecture seule.
+
+## Lire une carte depuis une scène
+
+Dans l'éditeur de scènes, ajoutez l'action **Lire une carte Yoto** :
+
+1. Choisissez le lecteur.
+2. Saisissez l'identifiant de la carte (par exemple `5WsQg`).
+3. Laissez l'index de piste à 0 pour démarrer la première piste du chapitre 01.
 
 ## Configuration
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+Le jeton d'accès Yoto dure quelques heures. L'intégration garde aussi un
+jeton de rafraîchissement, à usage unique, et s'en sert pour en obtenir un
+nouveau avant l'échéance. La liaison ne s'interrompt pas tant que Yoto
+l'accepte.
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+1. Sur le portail développeur Yoto, créez une application qui autorise le
+   flux **device code**. Copiez le client id. Les droits sont ceux de
+   l'intégration Home Assistant : `offline_access` et les droits `family`
+   des lecteurs. Le guide est sur
+   [yoto.dev](https://yoto.dev/authentication/headless-cli-auth/).
+2. Collez le client id. Si l'application est confidentielle, collez aussi
+   le secret. Un client public n'a pas de secret.
+3. Enregistrez, puis cliquez sur **Lier mon compte Yoto**. Une page Yoto
+   s'ouvre : connectez-vous et autorisez l'application.
+4. Utilisez **Tester la connexion Yoto**. Les lecteurs apparaissent dans
+   l'onglet Découverte.
 
-## Actions
+Il faut lier le compte à nouveau seulement si vous changez le mot de passe
+Yoto, si vous révoquez l'application dans le compte Yoto, ou si les serveurs
+Yoto rejettent durablement la session. Les jetons ne sont jamais écrits dans
+les logs.
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
-
-## Scènes
-
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
-
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
-
-## Tableau de bord
-
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
-
-## Dépannage
-
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+L'**intervalle de rafraîchissement** règle la lecture de la batterie, du
+volume et de la veilleuse. Le défaut est 5 minutes, et Gladys n'interroge pas
+plus d'une fois par minute.

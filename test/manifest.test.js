@@ -9,7 +9,6 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { DEVICE_BLUEPRINTS, SCENE_TRIGGER_KEYS } from '../src/devices/index.js';
 import { SCENE_ACTIONS } from '../src/scenes.js';
-import { WIDGETS } from '../src/widgets.js';
 import { DEFAULT_CONFIG } from '../src/config.js';
 
 const manifest = JSON.parse(
@@ -29,8 +28,9 @@ const allFields = [
   ...(manifest.widgets ?? []).flatMap((widget) => widget.settings ?? []),
 ];
 
-// Actions registered outside the blueprints (see index.js).
-const REGISTRY_LEVEL_ACTIONS = ['identify'];
+// Actions registered outside the blueprints (see index.js). None: the
+// connection test belongs to the player blueprint.
+const REGISTRY_LEVEL_ACTIONS = [];
 
 // Manifest fields older Gladys releases reject as unknown, with the first
 // release accepting them. The store validator refuses a manifest whose
@@ -99,14 +99,8 @@ test('every scene_actions key has an onSceneAction handler, and vice versa', () 
   }
 });
 
-test('every widgets key has an onWidgetGet handler, and vice versa', () => {
-  const declared = keysOf(manifest.widgets);
-  for (const key of declared) {
-    assert.equal(typeof WIDGETS[key]?.get, 'function', `widget "${key}" has no content handler`);
-  }
-  for (const key of Object.keys(WIDGETS)) {
-    assert.ok(declared.includes(key), `widget "${key}" is not declared in widgets`);
-  }
+test('this integration does not declare a dashboard widget', () => {
+  assert.equal(manifest.widgets, undefined);
 });
 
 test('every scene trigger the code fires is declared in scene_triggers, and vice versa', () => {

@@ -1,61 +1,48 @@
-# Demo Devices Template
+# Yoto Player Advanced
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+This integration adds every Yoto Player of a Yoto account to Gladys Assistant:
+night light, volume limits, battery, and card playback from a scene.
 
 ## What you get
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+After the account is linked, each player shows up in the **Discovery** tab:
+
+- **Night light** — on/off and colour of the light ring for the profile the
+  player is in (day or night). Off sends Yoto's `#0` colour.
+- **Brightness** — screen brightness of that same profile, from 0 to 100.
+  The value `auto` is shown as 100; moving the slider stores a fixed number.
+- **Volume** — the player knob, from 0 to 16.
+- **Day max volume** and **Night max volume** — the limits stored on the player.
+- **Battery** — read-only percentage.
+
+## Play a card from a scene
+
+In the scene editor, add the action **Play a Yoto card**:
+
+1. Choose the player.
+2. Enter the card id (for example `5WsQg`).
+3. Leave the track index at 0 to start the first track of chapter 01.
 
 ## Configuration
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+The Yoto access token lasts a few hours. The integration also keeps a
+single-use refresh token and exchanges it for a new pair before the access
+token expires, so the link stays up while Yoto accepts it.
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+1. In the Yoto developer dashboard, create an application that allows the
+   **device code** grant and copy the client id. The scopes are the ones used
+   by the Home Assistant integration: `offline_access` and the `family`
+   device scopes. See the
+   [Yoto guide](https://yoto.dev/authentication/headless-cli-auth/).
+2. Paste the client id. Paste the secret too when the application is
+   confidential. A public device-code client has no secret.
+3. Save, then click **Link my Yoto account**. Yoto's page opens: sign in and
+   approve the application.
+4. Use **Test the Yoto connection**. Players appear in the Discovery tab.
 
-## Actions
+Link the account again only if you change the Yoto password, revoke the
+application in the Yoto account, or Yoto keeps rejecting the session. Tokens
+are never written to the logs.
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
-
-## Scenes
-
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
-
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
-
-## Dashboard
-
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
-
-## Troubleshooting
-
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+The **refresh interval** is how often battery, volume and the night light are
+read. The default is 5 minutes, and Gladys cannot poll faster than one minute.

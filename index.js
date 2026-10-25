@@ -1,18 +1,15 @@
 // -----------------------------------------------------------------------------
 // Entry point of the Gladys external integration.
 //
-// Role of this file: wire the SDK to the device catalog (src/devices/). It holds
-// NO hardware logic: all the control "work" lives in the device modules. This
-// file only:
-//   1. instantiates the SDK (connection, auth, reconnection: handled for you);
-//   2. registers the event handlers BEFORE connect();
-//   3. connects and publishes the discovered devices.
+// Wires the SDK to the Yoto player catalog. Hardware calls live in
+// src/devices/yotoPlayer.js and src/yoto-client.js. The OAuth device-code
+// flow and the refresh token live in src/yoto-auth.js and src/yoto-session.js.
+// Handlers are registered before connect().
 //
-// Environment variables provided by the Gladys supervisor to the container:
-//   - GLADYS_HOST_API_URL         (host API URL)
-//   - GLADYS_INTEGRATION_TOKEN    (integration-scoped JWT)
-//   - GLADYS_INTEGRATION_SELECTOR (integration identifier)
-// The SDK reads them automatically: `new GladysIntegration()` is enough.
+// The supervisor injects GLADYS_HOST_API_URL, GLADYS_INTEGRATION_TOKEN and
+// GLADYS_INTEGRATION_SELECTOR. The Yoto client id is a configuration field.
+// The access token and the refresh token are written by the sign-in flow,
+// outside the form.
 // -----------------------------------------------------------------------------
 
 import { GladysIntegration, logger } from '@gladysassistant/integration-sdk';
@@ -20,200 +17,212 @@ import { normalizeConfig } from './src/config.js';
 import {
   DEVICE_BLUEPRINTS,
   buildDiscoveredDevices,
-  buildTransportEntries,
   createPoller,
+  discoverPlayers,
   findBlueprintByDevice,
-  identifyDevice,
+  getKnownPlayers,
 } from './src/devices/index.js';
+import { yotoPlayer } from './src/devices/yotoPlayer.js';
 import { SCENE_ACTIONS } from './src/scenes.js';
-import { WIDGETS, refreshWidgets } from './src/widgets.js';
+import { pollForTokens, startDeviceAuthorization } from './src/yoto-auth.js';
+import { YotoAuthError, YotoClient } from './src/yoto-client.js';
+import { YotoSession } from './src/yoto-session.js';
 
 const gladys = new GladysIntegration();
 
-// Current configuration (hot-reloaded via onConfigUpdated).
 let config = normalizeConfig();
+// Bumped to abandon an in-flight device-code poll (a new sign-in, or shutdown).
+let linkAttempt = 0;
 
-// Cleanup functions for the "push" subscriptions (e.g. the motion sensor).
-let pushCleanups = [];
+const SIGN_IN_STATUS = {
+  en: 'Yoto sign-in was not completed. Start it again.',
+  fr: 'La connexion Yoto n’a pas abouti. Relancez-la.',
+};
 
-// --- Discovery: Gladys asks for the list of devices --------------------------
-gladys.onScanRequest(async () => {
-  logger.info('onScanRequest -> publishing discovered devices');
-  await gladys.publishDiscoveredDevices(buildDiscoveredDevices(gladys, config));
+const LINK_STATUS = {
+  en: 'Link your Yoto account from the configuration screen.',
+  fr: 'Liez votre compte Yoto depuis l’écran de configuration.',
+};
+
+const REVOKED_STATUS = {
+  en: 'Yoto authorization is no longer valid. Link the account again.',
+  fr: 'L’autorisation Yoto n’est plus valable. Liez à nouveau le compte.',
+};
+
+const INIT_STATUS = {
+  en: 'Initialization failed, check the integration logs.',
+  fr: "L'initialisation a échoué, consultez les logs de l'intégration.",
+};
+
+const session = new YotoSession({
+  getConfig: () => config,
+  persist: persistTokens,
 });
 
-// --- Command: the user acts on a controllable feature ------------------------
+const pollDevice = createPoller(session);
+
+gladys.onOAuthAuthorizeUrl(async (key) => {
+  if (key !== 'account') {
+    throw new Error(`Unknown Yoto account link: ${key}`);
+  }
+  if (!config.client_id) {
+    throw new YotoAuthError('Missing Yoto client id');
+  }
+  const attempt = ++linkAttempt;
+  const pending = await startDeviceAuthorization(config.client_id, {
+    clientSecret: config.client_secret,
+  });
+  // The user still has to approve in the browser. Return the page now and
+  // poll in the background: the device code stays valid for several minutes.
+  finishLink(attempt, pending).catch((err) => {
+    logger.error('Yoto sign-in failed', err);
+    gladys.setConnectionStatus(false, SIGN_IN_STATUS).catch(() => {});
+  });
+  return pending.verification_uri_complete || pending.verification_uri;
+});
+
+gladys.onScanRequest(async () => {
+  logger.info('onScanRequest -> publishing Yoto players');
+  await reloadPlayers();
+});
+
 gladys.onSetValue(async (device, feature, value) => {
   logger.info(`onSetValue <- ${feature.external_id} = ${value}`);
   const blueprint = findBlueprintByDevice(gladys, device);
   if (!blueprint || typeof blueprint.onSetValue !== 'function') {
-    // Throw: the SDK sends a success:false acknowledgement to Gladys.
     throw new Error(`No command handler for ${device.external_id}`);
   }
-  await blueprint.onSetValue(gladys, { device, feature, value, config });
+  await blueprint.onSetValue(gladys, { device, feature, value, config, session });
 });
 
-// --- Camera: Gladys needs a FRESH image of a camera device -------------------
-// Triggered by the dashboard live view or a chat intent. The resolved
-// `image/jpg;base64,...` string (≤ 150 KB) is acked back to Gladys; the ack is
-// awaited under 15 s (not the usual 5 s), so a real capture fits.
-gladys.onGetImage(async (device) => {
-  logger.info(`onGetImage <- ${device.external_id}`);
-  const blueprint = findBlueprintByDevice(gladys, device);
-  if (!blueprint || typeof blueprint.onGetImage !== 'function') {
-    throw new Error(`No camera handler for ${device.external_id}`);
-  }
-  return blueprint.onGetImage(gladys, { device, config });
-});
-
-// --- Polling: Gladys asks to refresh a device --------------------------------
-// Gladys polls the devices published with a `poll_frequency` once a minute;
-// the poller reads them at the interval the user chose in the config.
-const pollDevice = createPoller();
 gladys.onPoll(async (device) => {
   if (!(await pollDevice(gladys, device, config))) {
     logger.debug(`onPoll skipped (not due) for ${device.external_id}`);
   }
 });
 
-// --- Manifest actions: buttons in the Configuration screen -------------------
-// Each action declared in the `actions` field of the manifest is registered
-// per key; the message resolved by the handler is displayed under the button
-// (the ack is awaited under the action's `timeout_seconds`, not the usual 5 s).
 for (const blueprint of DEVICE_BLUEPRINTS) {
   for (const [actionKey, handler] of Object.entries(blueprint.actions ?? {})) {
-    gladys.onAction(actionKey, (fields) => handler(gladys, { fields, config }));
+    gladys.onAction(actionKey, (fields) => handler(gladys, { fields, config, session }));
   }
 }
 
-// The `identify` action targets ONE device chosen by the user, so it is not
-// owned by a single blueprint. Its manifest field declares
-// `"source": "devices"` (SDK v0.7+): instead of static `options`, the
-// Configuration screen fills the select with the integration's own created
-// devices, and the handler receives the chosen external_id as a field value.
-gladys.onAction('identify', (fields) => {
-  logger.info(`Action identify <- ${fields.device}`);
-  return identifyDevice(gladys, fields.device, config);
-});
-
-// --- Scene actions: operations a scene author placed in a scene -------------
-// Each action declared in the `scene_actions` field of the manifest is
-// registered per key (SDK v0.14+, Gladys 5.1+). The handler receives the
-// RESOLVED fields and returns the declared outputs (see src/scenes.js). Scene
-// TRIGGERS need no handler: the devices fire them with publishSceneEvent (see
-// src/devices/motionSensor.js).
 for (const [actionKey, handler] of Object.entries(SCENE_ACTIONS)) {
-  gladys.onSceneAction(actionKey, (fields) => handler(gladys, { fields, config }));
+  gladys.onSceneAction(actionKey, (fields) => handler(gladys, { fields, config, session }));
 }
 
-// --- Dashboard widgets -------------------------------------------------------
-// Each widget declared in the `widgets` field of the manifest is registered
-// per key (SDK v0.14+, Gladys 5.1+): Gladys pulls its content (ack awaited
-// under 15 s) and relays the taps on its `button` actions (see src/widgets.js).
-for (const [widgetKey, widget] of Object.entries(WIDGETS)) {
-  gladys.onWidgetGet(widgetKey, (request) => widget.get(gladys, { ...request, config }));
-  if (typeof widget.action === 'function') {
-    gladys.onWidgetAction(widgetKey, (actionKey, params, { settings }) =>
-      widget.action(gladys, { actionKey, params, settings, config }),
-    );
-  }
-}
-
-// --- Configuration updated by the user ---------------------------------------
 gladys.onConfigUpdated(async (newConfig) => {
   logger.info('onConfigUpdated -> new configuration received');
-  config = normalizeConfig(newConfig);
-  // Re-publish the devices: some properties (the temperature unit) depend on it.
-  // publishDiscoveredDevices is idempotent (upsert by external_id).
-  await gladys.publishDiscoveredDevices(buildDiscoveredDevices(gladys, config));
-  // The reserved GLADYS_PREFER_LOCAL key arrives here like any other key:
-  // re-route the dual-channel devices, then reflect the ACTUAL outcome.
-  await publishDeviceTransports();
-  // The dashboard widget shows config-derived values (plug connection,
-  // observed location): nudge it instead of waiting for its content TTL.
-  refreshWidgets(gladys);
+  const next = normalizeConfig(newConfig);
+  // A token renewal writes the config and Gladys echoes it here. The session
+  // is already the one we just stored: rediscovering would overlap the renewal.
+  const sameSession =
+    next.client_id === config.client_id &&
+    next.client_secret === config.client_secret &&
+    next.poll_frequency === config.poll_frequency &&
+    next.access_token === config.access_token &&
+    next.refresh_token === config.refresh_token;
+  config = next;
+  if (sameSession) {
+    return;
+  }
+  try {
+    const players = await reloadPlayers();
+    await refreshKnownPlayers();
+    await reportConnection(players);
+  } catch (err) {
+    logger.error('Configuration reload failed', err);
+    await reportFailure(err);
+  }
 });
 
-// --- Connection lifecycle ----------------------------------------------------
-// The SDK itself logs the WebSocket lifecycle (connections, disconnections,
-// reconnection attempts) under the `gladys-sdk` name: no need to log it again
-// here, these handlers only run the integration's own (re)initialization.
 gladys.on('connected', async () => {
   try {
-    // 1) Fetch the config filled in by the user.
     config = normalizeConfig(await gladys.getConfig());
-
-    // 2) (Re)publish all devices as soon as we are connected.
-    await gladys.publishDiscoveredDevices(buildDiscoveredDevices(gladys, config));
-
-    // 3) Publish the per-device transport badge (cloud/local, dual-channel
-    // devices only). Lightweight channel: on a live switch, call it again
-    // without re-publishing the devices.
-    await publishDeviceTransports();
-    // The widget's computed rows (plug connection, observed location) follow
-    // the config and the transports just re-published, and the nudges sent
-    // while the socket was down were dropped: re-sync open dashboards too.
-    refreshWidgets(gladys);
-
-    // 4) Start the real-time subscriptions ("push" sensors, camera snapshots).
-    stopPushSubscriptions();
-    pushCleanups = DEVICE_BLUEPRINTS.filter((bp) => typeof bp.startPush === 'function').map((bp) =>
-      bp.startPush(gladys, config),
-    );
-
-    // 5) Report the application-level status, shown in the Configuration
-    // screen. Distinct from the container state machine: an integration can
-    // be RUNNING and still disconnected from its third-party service.
-    await gladys.setConnectionStatus(true);
+    const players = await reloadPlayers();
+    await refreshKnownPlayers();
+    await reportConnection(players);
   } catch (err) {
     logger.error('Post-connection initialization failed', err);
-    await gladys
-      .setConnectionStatus(false, {
-        en: 'Initialization failed, check the integration logs.',
-        fr: "L'initialisation a échoué, consultez les logs de l'intégration.",
-      })
-      .catch(() => {});
+    await reportFailure(err);
   }
 });
 
-gladys.on('disconnected', () => {
-  stopPushSubscriptions();
-});
-
-// Publish the effective transport of every dual-channel device
-// ('local' | 'cloud' | 'unreachable'), rendered as a badge in the Gladys UI.
-// An entry can also flag a degraded state (`{ degraded: true, message }`,
-// SDK v0.7+): the badge keeps its transport color plus an orange dot, and the
-// tooltip shows the reason — see src/devices/plug.js.
-async function publishDeviceTransports() {
-  const entries = buildTransportEntries(gladys, config);
-  if (entries.length > 0) {
-    await gladys.publishTransports(entries);
-  }
-}
-
-function stopPushSubscriptions() {
-  for (const cleanup of pushCleanups) {
-    try {
-      cleanup?.();
-    } catch (err) {
-      logger.error('Push subscription cleanup failed', err);
-    }
-  }
-  pushCleanups = [];
-}
-
-// --- Graceful shutdown -------------------------------------------------------
-// The SDK stops the push subscriptions, disconnects cleanly and exits with
-// code 0 when the supervisor stops the container (SIGTERM/SIGINT).
 gladys.handleShutdown((signal) => {
   logger.info(`Received ${signal} -> graceful shutdown`);
-  stopPushSubscriptions();
+  linkAttempt += 1;
 });
 
-// --- Startup -----------------------------------------------------------------
-logger.info('Starting the template integration...');
+logger.info('Starting Yoto Player Advanced...');
 gladys.connect().catch((err) => {
   logger.error('Initial connection failed', err);
   process.exit(1);
 });
+
+async function finishLink(attempt, pending) {
+  const tokens = await pollForTokens(config.client_id, pending, {
+    clientSecret: config.client_secret,
+    shouldStop: () => attempt !== linkAttempt,
+  });
+  if (!tokens || attempt !== linkAttempt) {
+    return;
+  }
+  await persistTokens(tokens);
+  const players = await reloadPlayers();
+  await refreshKnownPlayers();
+  await reportConnection(players);
+}
+
+async function persistTokens(partial) {
+  config = normalizeConfig({ ...config, ...partial });
+  await gladys.setConfig({
+    access_token: config.access_token,
+    refresh_token: config.refresh_token,
+    token_expires_at: config.token_expires_at,
+  });
+}
+
+async function reloadPlayers() {
+  if (!session.hasCredentials()) {
+    throw new YotoAuthError('Missing Yoto account');
+  }
+  const client = new YotoClient(session);
+  await discoverPlayers(client);
+  await gladys.publishDiscoveredDevices(buildDiscoveredDevices(gladys));
+  return getKnownPlayers();
+}
+
+async function refreshKnownPlayers() {
+  for (const player of getKnownPlayers()) {
+    try {
+      await yotoPlayer.onPoll(gladys, {
+        device: { external_id: yotoPlayer.deviceExternalId(gladys, player.deviceId) },
+        config,
+        session,
+      });
+    } catch (err) {
+      logger.error(`Initial poll failed for ${player.deviceId}`, err);
+    }
+  }
+}
+
+async function reportConnection(players) {
+  if (players.length === 0) {
+    await gladys.setConnectionStatus(true, {
+      en: 'Connected, but this account has no Yoto player.',
+      fr: "Connecté, mais ce compte n'a aucun Yoto Player.",
+    });
+    return;
+  }
+  await gladys.setConnectionStatus(true);
+}
+
+async function reportFailure(err) {
+  const message =
+    err instanceof YotoAuthError
+      ? config.refresh_token
+        ? REVOKED_STATUS
+        : LINK_STATUS
+      : INIT_STATUS;
+  await gladys.setConnectionStatus(false, message).catch(() => {});
+}
