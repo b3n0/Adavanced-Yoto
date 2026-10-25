@@ -16,39 +16,39 @@
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Yoto account", "fr": "Compte Yoto" },
+      "label": { "en": "Getting started", "fr": "Pour commencer" },
       "description": {
-        "en": "Create a Yoto developer application that allows the device-code grant, paste its client id, then link the account. The access token is renewed on its own with the refresh token. Sign in again only if you change the Yoto password or revoke the application.",
-        "fr": "Créez une application développeur Yoto qui autorise le flux device code, collez son client id, puis liez le compte. Le jeton d'accès se renouvelle seul grâce au jeton de rafraîchissement. Reconnectez-vous seulement si vous changez le mot de passe Yoto ou si vous révoquez l'application."
+        "en": "Open the link, create a Yoto application and copy its identifier (Client ID). Paste it below, save, then click Link my Yoto account and sign in with the family account. Players then show up in the Discovery tab. The connection stays on by itself: link the account again only if the Yoto password changes, or if the application is removed from the account.",
+        "fr": "Ouvrez le lien, créez une application Yoto et copiez son identifiant (Client ID). Collez-le ci-dessous, enregistrez, puis cliquez sur Lier mon compte Yoto et connectez-vous avec le compte de la famille. Les lecteurs apparaissent ensuite dans l'onglet Découverte. La connexion se maintient toute seule : on ne la refait que si le mot de passe Yoto change, ou si l'application est retirée du compte."
       },
       "links": [
         {
-          "url": "https://yoto.dev/authentication/headless-cli-auth/",
-          "label": { "en": "Yoto device-code sign-in", "fr": "Connexion Yoto par code appareil" }
+          "url": "https://dashboard.yoto.dev/",
+          "label": { "en": "Create a Yoto application", "fr": "Créer une application Yoto" }
         }
       ]
     },
     {
       "key": "client_id",
       "type": "string",
-      "label": { "en": "Yoto client id", "fr": "Client id Yoto" },
+      "label": { "en": "Identifier", "fr": "Identifiant" },
       "description": {
-        "en": "Client id of your Yoto developer application. The same one as Home Assistant works, with the family device scopes and offline_access.",
-        "fr": "Client id de votre application développeur Yoto. Celui de Home Assistant convient, avec les droits family des lecteurs et offline_access."
+        "en": "The Client ID copied from your Yoto application.",
+        "fr": "Le Client ID copié depuis votre application Yoto."
       },
       "placeholder": {
-        "en": "From the Yoto developer dashboard",
-        "fr": "Depuis le portail développeur Yoto"
+        "en": "Paste the Client ID",
+        "fr": "Collez le Client ID"
       },
       "required": true
     },
     {
       "key": "client_secret",
       "type": "secret",
-      "label": { "en": "Yoto client secret", "fr": "Secret client Yoto" },
+      "label": { "en": "Secret", "fr": "Secret" },
       "description": {
-        "en": "Only for a confidential application. Leave empty for a public device-code client. Never written to the logs.",
-        "fr": "Uniquement pour une application confidentielle. Laissez vide pour un client public en device code. Jamais écrit dans les logs."
+        "en": "Only if Yoto shows one next to the identifier. Otherwise leave it empty.",
+        "fr": "Seulement si Yoto en affiche un à côté de l'identifiant. Sinon, laissez vide."
       },
       "required": false
     },
@@ -60,10 +60,10 @@
     {
       "key": "poll_frequency",
       "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "label": { "en": "Player update (seconds)", "fr": "Mise à jour des lecteurs (secondes)" },
       "description": {
-        "en": "How often battery, volume and night-light state are read, in seconds (one minute minimum).",
-        "fr": "Fréquence de lecture de la batterie, du volume et de la veilleuse, en secondes (une minute minimum)."
+        "en": "How long to wait before reading battery, volume and night light again. 300 means 5 minutes.",
+        "fr": "Délai entre deux lectures de la batterie, du volume et de la veilleuse. 300 correspond à 5 minutes."
       },
       "placeholder": { "en": "e.g. 300", "fr": "ex. 300" },
       "required": false,

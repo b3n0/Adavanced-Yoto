@@ -1,7 +1,7 @@
 # Yoto Player Advanced
 
 Intégration externe Gladys Assistant pour un ou plusieurs [Yoto Player](https://yotoplay.com).
-Elle parle à l'API `https://api.yotoplay.com`. La session est OAuth2 : un jeton d'accès de quelques heures, renouvelé avec un jeton de rafraîchissement.
+Elle parle à l'API `https://api.yotoplay.com`. Le compte Yoto se lie une fois, et la connexion se maintient toute seule.
 
 ## Ce que Gladys reçoit
 
@@ -21,11 +21,11 @@ La lecture d'une carte est une **action de scène** `play_card` (identifiant de 
 
 ## Configuration
 
-1. Créez une application Yoto (flux device code) et collez son client id.
-2. Cliquez sur **Lier mon compte Yoto** et autorisez l'accès dans le navigateur.
+1. Sur [dashboard.yoto.dev](https://dashboard.yoto.dev/), créez une application et copiez le Client ID.
+2. Collez-le dans **Identifiant**, enregistrez, puis cliquez sur **Lier mon compte Yoto**.
 3. Les lecteurs apparaissent dans l'onglet Découverte.
 
-Le jeton d'accès est renouvelé tout seul. Une nouvelle liaison n'est nécessaire que si le compte Yoto révoque l'application (mot de passe changé, accès retiré). Les jetons ne sont jamais écrits dans les logs. Le détail est dans `docs/fr.md`.
+La connexion se maintient toute seule. On ne la refait que si le mot de passe Yoto change, ou si l'application est retirée du compte. Le détail est dans `docs/fr.md`.
 
 ## Développement
 

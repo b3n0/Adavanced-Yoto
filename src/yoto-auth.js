@@ -1,5 +1,6 @@
 // -----------------------------------------------------------------------------
-// Yoto OAuth2, the same grant Home Assistant keeps alive.
+// Yoto OAuth2. Gladys opens the verification page and this module polls until
+// the family account approves it.
 //
 // The access token lasts a few hours. Yoto also returns a refresh token
 // (scope offline_access). That refresh token is single-use: every renewal
@@ -16,8 +17,8 @@ import { YotoAuthError } from './yoto-client.js';
 export const YOTO_AUTH_BASE = 'https://login.yotoplay.com';
 export const YOTO_AUDIENCE = 'https://api.yotoplay.com';
 
-// Same scopes as the Home Assistant integration: list, control and configure
-// players, and receive a refresh token (offline_access).
+// Scopes needed to list, control and configure players, and to renew the
+// session (offline_access).
 export const YOTO_SCOPES = [
   'offline_access',
   'family:view',

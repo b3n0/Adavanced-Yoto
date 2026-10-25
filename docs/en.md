@@ -25,24 +25,16 @@ In the scene editor, add the action **Play a Yoto card**:
 
 ## Configuration
 
-The Yoto access token lasts a few hours. The integration also keeps a
-single-use refresh token and exchanges it for a new pair before the access
-token expires, so the link stays up while Yoto accepts it.
+1. Open the [Yoto applications site](https://dashboard.yoto.dev/) and create
+   an application. Copy the identifier it shows, the **Client ID**.
+2. Paste it into **Identifier**, then save. If a secret is shown next to it,
+   paste that into **Secret**. Otherwise leave that field empty.
+3. Click **Link my Yoto account**. Yoto's page opens: sign in with the family
+   account and approve the application.
+4. Click **Test the Yoto connection**. Players appear in the Discovery tab.
 
-1. In the Yoto developer dashboard, create an application that allows the
-   **device code** grant and copy the client id. The scopes are the ones used
-   by the Home Assistant integration: `offline_access` and the `family`
-   device scopes. See the
-   [Yoto guide](https://yoto.dev/authentication/headless-cli-auth/).
-2. Paste the client id. Paste the secret too when the application is
-   confidential. A public device-code client has no secret.
-3. Save, then click **Link my Yoto account**. Yoto's page opens: sign in and
-   approve the application.
-4. Use **Test the Yoto connection**. Players appear in the Discovery tab.
+The connection stays on by itself. Link the account again only if the Yoto
+password changes, or if the application is removed from the account.
 
-Link the account again only if you change the Yoto password, revoke the
-application in the Yoto account, or Yoto keeps rejecting the session. Tokens
-are never written to the logs.
-
-The **refresh interval** is how often battery, volume and the night light are
-read. The default is 5 minutes, and Gladys cannot poll faster than one minute.
+**Player update** is how often battery, volume and the night light are read.
+300 means 5 minutes, and Gladys cannot go below one minute.

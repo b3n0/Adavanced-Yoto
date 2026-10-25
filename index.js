@@ -35,18 +35,18 @@ let config = normalizeConfig();
 let linkAttempt = 0;
 
 const SIGN_IN_STATUS = {
-  en: 'Yoto sign-in was not completed. Start it again.',
-  fr: 'La connexion Yoto n’a pas abouti. Relancez-la.',
+  en: 'Yoto sign-in did not finish. Click Link my Yoto account again.',
+  fr: 'La connexion Yoto ne s’est pas terminée. Cliquez à nouveau sur Lier mon compte Yoto.',
 };
 
 const LINK_STATUS = {
-  en: 'Link your Yoto account from the configuration screen.',
-  fr: 'Liez votre compte Yoto depuis l’écran de configuration.',
+  en: 'Paste the Yoto identifier, save, then click Link my Yoto account.',
+  fr: 'Collez l’identifiant Yoto, enregistrez, puis cliquez sur Lier mon compte Yoto.',
 };
 
 const REVOKED_STATUS = {
-  en: 'Yoto authorization is no longer valid. Link the account again.',
-  fr: 'L’autorisation Yoto n’est plus valable. Liez à nouveau le compte.',
+  en: 'The Yoto account needs to be linked again.',
+  fr: 'Il faut lier à nouveau le compte Yoto.',
 };
 
 const INIT_STATUS = {

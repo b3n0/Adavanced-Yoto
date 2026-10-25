@@ -10,6 +10,10 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- The configuration screen explains how to link the Yoto account in plain language.
+
 ## [1.0.1] - 2026-10-25
 
 ### Added

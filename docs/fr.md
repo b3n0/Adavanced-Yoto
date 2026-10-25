@@ -29,28 +29,18 @@ Dans l'éditeur de scènes, ajoutez l'action **Lire une carte Yoto** :
 
 ## Configuration
 
-Le jeton d'accès Yoto dure quelques heures. L'intégration garde aussi un
-jeton de rafraîchissement, à usage unique, et s'en sert pour en obtenir un
-nouveau avant l'échéance. La liaison ne s'interrompt pas tant que Yoto
-l'accepte.
-
-1. Sur le portail développeur Yoto, créez une application qui autorise le
-   flux **device code**. Copiez le client id. Les droits sont ceux de
-   l'intégration Home Assistant : `offline_access` et les droits `family`
-   des lecteurs. Le guide est sur
-   [yoto.dev](https://yoto.dev/authentication/headless-cli-auth/).
-2. Collez le client id. Si l'application est confidentielle, collez aussi
-   le secret. Un client public n'a pas de secret.
-3. Enregistrez, puis cliquez sur **Lier mon compte Yoto**. Une page Yoto
-   s'ouvre : connectez-vous et autorisez l'application.
-4. Utilisez **Tester la connexion Yoto**. Les lecteurs apparaissent dans
+1. Ouvrez [le site des applications Yoto](https://dashboard.yoto.dev/) et
+   créez une application. Copiez l'identifiant affiché, le **Client ID**.
+2. Collez-le dans **Identifiant**, puis enregistrez. S'il y a aussi un
+   secret à côté, collez-le dans **Secret**. Sinon, laissez ce champ vide.
+3. Cliquez sur **Lier mon compte Yoto**. La page Yoto s'ouvre : connectez-vous
+   avec le compte de la famille et autorisez l'application.
+4. Cliquez sur **Tester la connexion Yoto**. Les lecteurs apparaissent dans
    l'onglet Découverte.
 
-Il faut lier le compte à nouveau seulement si vous changez le mot de passe
-Yoto, si vous révoquez l'application dans le compte Yoto, ou si les serveurs
-Yoto rejettent durablement la session. Les jetons ne sont jamais écrits dans
-les logs.
+La connexion se maintient toute seule. On ne la refait que si le mot de passe
+Yoto change, ou si l'application est retirée du compte.
 
-L'**intervalle de rafraîchissement** règle la lecture de la batterie, du
-volume et de la veilleuse. Le défaut est 5 minutes, et Gladys n'interroge pas
-plus d'une fois par minute.
+**Mise à jour des lecteurs** règle la lecture de la batterie, du volume et de
+la veilleuse. 300 correspond à 5 minutes, et Gladys ne peut pas descendre
+sous une minute.
