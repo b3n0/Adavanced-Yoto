@@ -16,6 +16,10 @@ the notes of the version's GitHub Release.
 
 - The configuration screen explains how to link the Yoto account in plain language.
 
+### Fixed
+
+- Linking the Yoto account opens Yoto's sign-in page. Saving the identifier before the account is linked no longer fails.
+
 ## [1.0.1] - 2026-10-25
 
 ### Added

@@ -30,12 +30,15 @@ Dans l'éditeur de scènes, ajoutez l'action **Lire une carte Yoto** :
 ## Configuration
 
 1. Ouvrez [le site des applications Yoto](https://dashboard.yoto.dev/) et
-   créez une application. Copiez l'identifiant affiché, le **Client ID**.
-2. Collez-le dans **Identifiant**, puis enregistrez. S'il y a aussi un
-   secret à côté, collez-le dans **Secret**. Sinon, laissez ce champ vide.
-3. Cliquez sur **Lier mon compte Yoto**. La page Yoto s'ouvre : connectez-vous
+   créez une application.
+2. Sous le bouton **Lier mon compte Yoto**, Gladys affiche une adresse de
+   redirection. Copiez-la dans l'application Yoto, puis enregistrez-la là-bas.
+3. Copiez le **Client ID** de cette application dans **Identifiant**. S'il y
+   a aussi un secret, collez-le dans **Secret**. Sinon, laissez ce champ
+   vide. Enregistrez la page Gladys.
+4. Cliquez sur **Lier mon compte Yoto**. La page Yoto s'ouvre : connectez-vous
    avec le compte de la famille et autorisez l'application.
-4. Cliquez sur **Tester la connexion Yoto**. Les lecteurs apparaissent dans
+5. Cliquez sur **Tester la connexion Yoto**. Les lecteurs apparaissent dans
    l'onglet Découverte.
 
 La connexion se maintient toute seule. On ne la refait que si le mot de passe

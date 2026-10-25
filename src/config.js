@@ -3,7 +3,7 @@
 //
 // Filled in by the user in Gladys, from the `config_schema` of
 // `gladys-assistant-integration.json`. Defaults here MUST match the manifest
-// `default` values. The OAuth tokens are not form fields: the device-code
+// `default` values. The OAuth tokens are not form fields: the sign-in
 // flow writes them with setConfig, outside the schema, and they survive a
 // restart. Empty strings mean "not linked yet".
 // -----------------------------------------------------------------------------

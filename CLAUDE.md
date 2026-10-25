@@ -32,7 +32,7 @@ pushing.
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/yoto-auth.js                  OAuth2 device-code flow and refresh-token renewal
+src/yoto-auth.js                  OAuth2 sign-in (authorization code, PKCE) and refresh-token renewal
 src/yoto-session.js               single in-flight access-token renewal
 src/yoto-client.js                Yoto REST client (Bearer token, never logged)
 src/devices/index.js              registry of the device blueprints + poll dispatch

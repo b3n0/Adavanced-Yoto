@@ -2,8 +2,8 @@
 // Entry point of the Gladys external integration.
 //
 // Wires the SDK to the Yoto player catalog. Hardware calls live in
-// src/devices/yotoPlayer.js and src/yoto-client.js. The OAuth device-code
-// flow and the refresh token live in src/yoto-auth.js and src/yoto-session.js.
+// src/devices/yotoPlayer.js and src/yoto-client.js. The OAuth sign-in and the
+// refresh token live in src/yoto-auth.js and src/yoto-session.js.
 // Handlers are registered before connect().
 //
 // The supervisor injects GLADYS_HOST_API_URL, GLADYS_INTEGRATION_TOKEN and
@@ -24,15 +24,16 @@ import {
 } from './src/devices/index.js';
 import { yotoPlayer } from './src/devices/yotoPlayer.js';
 import { SCENE_ACTIONS } from './src/scenes.js';
-import { pollForTokens, startDeviceAuthorization } from './src/yoto-auth.js';
+import { createAuthorizationRequest, exchangeAuthorizationCode } from './src/yoto-auth.js';
 import { YotoAuthError, YotoClient } from './src/yoto-client.js';
 import { YotoSession } from './src/yoto-session.js';
 
 const gladys = new GladysIntegration();
 
 let config = normalizeConfig();
-// Bumped to abandon an in-flight device-code poll (a new sign-in, or shutdown).
-let linkAttempt = 0;
+// The PKCE verifier for the sign-in that is waiting for Yoto's redirect.
+// Replaced when the user starts again, and dropped once the callback arrives.
+let pendingAuth = null;
 
 const SIGN_IN_STATUS = {
   en: 'Yoto sign-in did not finish. Click Link my Yoto account again.',
@@ -40,8 +41,8 @@ const SIGN_IN_STATUS = {
 };
 
 const LINK_STATUS = {
-  en: 'Paste the Yoto identifier, save, then click Link my Yoto account.',
-  fr: 'Collez l’identifiant Yoto, enregistrez, puis cliquez sur Lier mon compte Yoto.',
+  en: 'Paste the redirect address into the Yoto application, save the identifier, then click Link my Yoto account.',
+  fr: 'Collez l’adresse de redirection dans l’application Yoto, enregistrez l’identifiant, puis cliquez sur Lier mon compte Yoto.',
 };
 
 const REVOKED_STATUS = {
@@ -61,24 +62,41 @@ const session = new YotoSession({
 
 const pollDevice = createPoller(session);
 
-gladys.onOAuthAuthorizeUrl(async (key) => {
+gladys.onOAuthAuthorizeUrl(async (key, redirectUri) => {
   if (key !== 'account') {
     throw new Error(`Unknown Yoto account link: ${key}`);
   }
-  if (!config.client_id) {
-    throw new YotoAuthError('Missing Yoto client id');
+  const request = createAuthorizationRequest({ clientId: config.client_id, redirectUri });
+  pendingAuth = request;
+  return request.url;
+});
+
+gladys.onOAuthCallback(async (key, { code, state, redirectUri }) => {
+  if (key !== 'account') {
+    throw new Error(`Unknown Yoto account link: ${key}`);
   }
-  const attempt = ++linkAttempt;
-  const pending = await startDeviceAuthorization(config.client_id, {
-    clientSecret: config.client_secret,
-  });
-  // The user still has to approve in the browser. Return the page now and
-  // poll in the background: the device code stays valid for several minutes.
-  finishLink(attempt, pending).catch((err) => {
-    logger.error('Yoto sign-in failed', err);
-    gladys.setConnectionStatus(false, SIGN_IN_STATUS).catch(() => {});
-  });
-  return pending.verification_uri_complete || pending.verification_uri;
+  const pending = pendingAuth;
+  pendingAuth = null;
+  if (!pending || state !== pending.state || !code) {
+    await gladys.setConnectionStatus(false, SIGN_IN_STATUS).catch(() => {});
+    throw new YotoAuthError('Yoto sign-in could not be completed');
+  }
+  try {
+    const tokens = await exchangeAuthorizationCode(config.client_id, {
+      code,
+      redirectUri: redirectUri || pending.redirectUri,
+      codeVerifier: pending.verifier,
+      clientSecret: config.client_secret,
+    });
+    await persistTokens(tokens);
+    const players = await reloadPlayers();
+    await refreshKnownPlayers();
+    await reportConnection(players);
+  } catch (err) {
+    logger.error('Yoto sign-in could not be completed', err.reason || '');
+    await gladys.setConnectionStatus(false, SIGN_IN_STATUS).catch(() => {});
+    throw err;
+  }
 });
 
 gladys.onScanRequest(async () => {
@@ -126,6 +144,10 @@ gladys.onConfigUpdated(async (newConfig) => {
   if (sameSession) {
     return;
   }
+  if (!session.hasCredentials()) {
+    await gladys.setConnectionStatus(false, LINK_STATUS);
+    return;
+  }
   try {
     const players = await reloadPlayers();
     await refreshKnownPlayers();
@@ -139,6 +161,11 @@ gladys.onConfigUpdated(async (newConfig) => {
 gladys.on('connected', async () => {
   try {
     config = normalizeConfig(await gladys.getConfig());
+    if (!session.hasCredentials()) {
+      logger.info('Yoto account is not linked yet');
+      await gladys.setConnectionStatus(false, LINK_STATUS);
+      return;
+    }
     const players = await reloadPlayers();
     await refreshKnownPlayers();
     await reportConnection(players);
@@ -150,7 +177,7 @@ gladys.on('connected', async () => {
 
 gladys.handleShutdown((signal) => {
   logger.info(`Received ${signal} -> graceful shutdown`);
-  linkAttempt += 1;
+  pendingAuth = null;
 });
 
 logger.info('Starting Yoto Player Advanced...');
@@ -158,20 +185,6 @@ gladys.connect().catch((err) => {
   logger.error('Initial connection failed', err);
   process.exit(1);
 });
-
-async function finishLink(attempt, pending) {
-  const tokens = await pollForTokens(config.client_id, pending, {
-    clientSecret: config.client_secret,
-    shouldStop: () => attempt !== linkAttempt,
-  });
-  if (!tokens || attempt !== linkAttempt) {
-    return;
-  }
-  await persistTokens(tokens);
-  const players = await reloadPlayers();
-  await refreshKnownPlayers();
-  await reportConnection(players);
-}
 
 async function persistTokens(partial) {
   config = normalizeConfig({ ...config, ...partial });

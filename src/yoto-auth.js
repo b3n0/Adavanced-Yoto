@@ -1,17 +1,19 @@
 // -----------------------------------------------------------------------------
-// Yoto OAuth2. Gladys opens the verification page and this module polls until
-// the family account approves it.
+// Yoto OAuth2. Gladys opens Yoto's sign-in page and receives the browser
+// back on the redirect address it provides.
 //
 // The access token lasts a few hours. Yoto also returns a refresh token
 // (scope offline_access). That refresh token is single-use: every renewal
 // returns a new one, and the previous one is dead. Callers must store the
 // new pair before doing anything else.
 //
-// Sign-in is the device-code grant: Gladys has no browser redirect of its
-// own for this (account_link). The user opens Yoto's page, approves the
-// family scopes, and this module polls the token endpoint until then.
+// Sign-in is the authorization-code grant with PKCE. New Yoto applications
+// reject the device-code grant, and a public application has no secret:
+// the code verifier proves the same Gladys instance finishes the sign-in.
+// The verifier never leaves this process and is never written to the logs.
 // -----------------------------------------------------------------------------
 
+import { createHash, randomBytes } from 'node:crypto';
 import { YotoAuthError } from './yoto-client.js';
 
 export const YOTO_AUTH_BASE = 'https://login.yotoplay.com';
@@ -30,75 +32,62 @@ export const YOTO_SCOPES = [
   'user:icons:manage',
 ].join(' ');
 
-const DEVICE_CODE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code';
-
 export function delay(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
 }
 
-export async function startDeviceAuthorization(
+// The authorize URL is what the browser opens. The verifier stays here until
+// Yoto redirects back; putting it in the URL would defeat PKCE.
+export function createAuthorizationRequest({ clientId, redirectUri }) {
+  const id = typeof clientId === 'string' ? clientId.trim() : '';
+  const redirect = typeof redirectUri === 'string' ? redirectUri : '';
+  if (!id) {
+    throw new YotoAuthError('Missing Yoto client id');
+  }
+  if (!redirect) {
+    throw new YotoAuthError('Missing Yoto redirect address');
+  }
+  const verifier = randomBytes(32).toString('base64url');
+  const challenge = createHash('sha256').update(verifier).digest('base64url');
+  const state = randomBytes(16).toString('base64url');
+  const url = new URL('/authorize', YOTO_AUTH_BASE);
+  url.search = new URLSearchParams({
+    audience: YOTO_AUDIENCE,
+    scope: YOTO_SCOPES,
+    response_type: 'code',
+    client_id: id,
+    redirect_uri: redirect,
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+    state,
+  }).toString();
+  return { url: url.toString(), state, verifier, redirectUri: redirect };
+}
+
+export async function exchangeAuthorizationCode(
   clientId,
-  { fetchImpl = globalThis.fetch, clientSecret = '' } = {},
+  { code, redirectUri, codeVerifier, clientSecret = '', fetchImpl = globalThis.fetch } = {},
 ) {
   const { ok, body } = await postForm(
-    `${YOTO_AUTH_BASE}/oauth/device/code`,
+    `${YOTO_AUTH_BASE}/oauth/token`,
     {
+      grant_type: 'authorization_code',
       client_id: clientId,
-      scope: YOTO_SCOPES,
-      audience: YOTO_AUDIENCE,
+      code,
+      redirect_uri: redirectUri,
+      code_verifier: codeVerifier,
       ...secretField(clientSecret),
     },
     fetchImpl,
   );
-  if (!ok || !body.device_code || !(body.verification_uri_complete || body.verification_uri)) {
-    throw new YotoAuthError('Yoto sign-in could not be started');
+  if (!ok || body.error || !body.access_token) {
+    const err = new YotoAuthError('Yoto sign-in could not be completed');
+    err.reason = typeof body.error === 'string' ? body.error : '';
+    throw err;
   }
-  return body;
-}
-
-export async function pollForTokens(
-  clientId,
-  pending,
-  { fetchImpl = globalThis.fetch, clientSecret = '', sleep = delay, shouldStop = () => false } = {},
-) {
-  let interval = Math.max(1, Number(pending.interval) || 5);
-  const deadline = Date.now() + (Number(pending.expires_in) || 300) * 1000;
-
-  while (Date.now() < deadline) {
-    if (shouldStop()) {
-      return null;
-    }
-    const { ok, status, body } = await postForm(
-      `${YOTO_AUTH_BASE}/oauth/token`,
-      {
-        grant_type: DEVICE_CODE_GRANT,
-        device_code: pending.device_code,
-        client_id: clientId,
-        audience: YOTO_AUDIENCE,
-        ...secretField(clientSecret),
-      },
-      fetchImpl,
-    );
-    if (ok && body.access_token) {
-      return normalizeTokens(body);
-    }
-    if (status === 403 && body.error === 'authorization_pending') {
-      await sleep(interval * 1000);
-      continue;
-    }
-    if (status === 403 && body.error === 'slow_down') {
-      interval += 5;
-      await sleep(interval * 1000);
-      continue;
-    }
-    if (body.error === 'expired_token' || body.error === 'access_denied') {
-      throw new YotoAuthError('Yoto sign-in was not completed');
-    }
-    throw new YotoAuthError('Yoto sign-in failed');
-  }
-  throw new YotoAuthError('Yoto sign-in timed out');
+  return normalizeTokens(body);
 }
 
 export async function refreshTokens(

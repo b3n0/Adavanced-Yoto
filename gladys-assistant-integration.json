@@ -18,8 +18,8 @@
       "type": "section",
       "label": { "en": "Getting started", "fr": "Pour commencer" },
       "description": {
-        "en": "Open the link, create a Yoto application and copy its identifier (Client ID). Paste it below, save, then click Link my Yoto account and sign in with the family account. Players then show up in the Discovery tab. The connection stays on by itself: link the account again only if the Yoto password changes, or if the application is removed from the account.",
-        "fr": "Ouvrez le lien, créez une application Yoto et copiez son identifiant (Client ID). Collez-le ci-dessous, enregistrez, puis cliquez sur Lier mon compte Yoto et connectez-vous avec le compte de la famille. Les lecteurs apparaissent ensuite dans l'onglet Découverte. La connexion se maintient toute seule : on ne la refait que si le mot de passe Yoto change, ou si l'application est retirée du compte."
+        "en": "Open the link and create a Yoto application. In that application, paste the redirect address Gladys shows under the Link my Yoto account button. Copy the Client ID, paste it below, and save. Then click Link my Yoto account and sign in with the family account. Players show up in the Discovery tab. The connection stays on by itself: link the account again only if the Yoto password changes, or if the application is removed from the account.",
+        "fr": "Ouvrez le lien et créez une application Yoto. Dans cette application, collez l'adresse de redirection affichée par Gladys sous le bouton Lier mon compte Yoto. Copiez le Client ID, collez-le ci-dessous, puis enregistrez. Cliquez ensuite sur Lier mon compte Yoto et connectez-vous avec le compte de la famille. Les lecteurs apparaissent dans l'onglet Découverte. La connexion se maintient toute seule : on ne la refait que si le mot de passe Yoto change, ou si l'application est retirée du compte."
       },
       "links": [
         {
@@ -54,7 +54,7 @@
     },
     {
       "key": "account",
-      "type": "account_link",
+      "type": "oauth2",
       "label": { "en": "Link my Yoto account", "fr": "Lier mon compte Yoto" }
     },
     {

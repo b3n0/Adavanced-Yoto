@@ -1,12 +1,13 @@
+import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { YotoAuthError } from '../src/yoto-client.js';
 import { YotoSession } from '../src/yoto-session.js';
 import {
+  createAuthorizationRequest,
+  exchangeAuthorizationCode,
   normalizeTokens,
-  pollForTokens,
   refreshTokens,
-  startDeviceAuthorization,
 } from '../src/yoto-auth.js';
 
 const REFRESH = 'refresh-token-value';
@@ -33,35 +34,65 @@ test('normalizeTokens keeps the previous refresh token when Yoto omits one', () 
   assert.equal(tokens.refresh_token, REFRESH);
 });
 
-test('device-code sign-in polls until the user approves, then returns both tokens', async () => {
-  const calls = [];
-  const fetchImpl = async (url, init) => {
-    calls.push({ url: String(url), fields: form(init) });
-    if (String(url).endsWith('/oauth/device/code')) {
-      return json({
-        device_code: 'device-code',
-        user_code: 'ABCD-EFGH',
-        verification_uri: 'https://login.yotoplay.com/activate',
-        verification_uri_complete: 'https://login.yotoplay.com/activate?user_code=ABCD-EFGH',
-        expires_in: 300,
-        interval: 5,
-      });
-    }
-    if (calls.filter((call) => call.url.endsWith('/oauth/token')).length === 1) {
-      return json({ error: 'authorization_pending' }, 403);
-    }
-    return json({ access_token: 'access', refresh_token: REFRESH, expires_in: 3600 });
-  };
+test('the sign-in page carries the Gladys redirect address and hides the verifier', () => {
+  const redirectUri = 'https://example.test/callback';
+  const request = createAuthorizationRequest({ clientId: ' client-id ', redirectUri });
+  const url = new URL(request.url);
 
-  const pending = await startDeviceAuthorization('client-id', { fetchImpl });
-  const tokens = await pollForTokens('client-id', pending, { fetchImpl, sleep: async () => {} });
+  assert.equal(`${url.origin}${url.pathname}`, 'https://login.yotoplay.com/authorize');
+  assert.equal(url.searchParams.get('client_id'), 'client-id');
+  assert.equal(url.searchParams.get('redirect_uri'), redirectUri);
+  assert.equal(url.searchParams.get('response_type'), 'code');
+  assert.equal(url.searchParams.get('code_challenge_method'), 'S256');
+  assert.equal(url.searchParams.get('state'), request.state);
+  assert.equal(url.searchParams.get('scope').includes('offline_access'), true);
+  assert.equal(
+    url.searchParams.get('code_challenge'),
+    createHash('sha256').update(request.verifier).digest('base64url'),
+  );
+  assert.equal(request.url.includes(request.verifier), false);
+});
 
-  assert.equal(pending.verification_uri_complete.includes('ABCD-EFGH'), true);
-  assert.equal(calls[0].fields.scope.includes('offline_access'), true);
-  assert.equal(calls[0].fields.scope.includes('family:devices:control'), true);
-  assert.equal(calls[1].fields.grant_type, 'urn:ietf:params:oauth:grant-type:device_code');
+test('the authorization code is exchanged with the same redirect address', async () => {
+  const redirectUri = 'https://example.test/callback';
+  const code = 'one-time-code';
+  let sent;
+  const tokens = await exchangeAuthorizationCode('client-id', {
+    code,
+    redirectUri,
+    codeVerifier: 'verifier-value',
+    fetchImpl: async (url, init) => {
+      sent = { url: String(url), fields: form(init) };
+      return json({ access_token: 'access', refresh_token: REFRESH, expires_in: 3600 });
+    },
+  });
+
+  assert.equal(sent.url, 'https://login.yotoplay.com/oauth/token');
+  assert.equal(sent.fields.grant_type, 'authorization_code');
+  assert.equal(sent.fields.redirect_uri, redirectUri);
+  assert.equal(sent.fields.code, code);
+  assert.equal(sent.fields.code_verifier, 'verifier-value');
+  assert.equal(sent.fields.client_secret, undefined);
   assert.equal(tokens.access_token, 'access');
   assert.equal(tokens.refresh_token, REFRESH);
+});
+
+test('a refused sign-in does not repeat the authorization code', async () => {
+  const code = 'one-time-code';
+  await assert.rejects(
+    exchangeAuthorizationCode('client-id', {
+      code,
+      redirectUri: 'https://example.test/callback',
+      codeVerifier: 'verifier-value',
+      fetchImpl: async () => json({ error: 'invalid_grant', error_description: code }, 403),
+    }),
+    (err) => {
+      assert.ok(err instanceof YotoAuthError);
+      assert.equal(err.reason, 'invalid_grant');
+      assert.equal(err.message.includes(code), false);
+      return true;
+    },
+  );
 });
 
 test('refresh replaces the refresh token and does not echo it in the error', async () => {

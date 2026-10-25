@@ -26,12 +26,15 @@ In the scene editor, add the action **Play a Yoto card**:
 ## Configuration
 
 1. Open the [Yoto applications site](https://dashboard.yoto.dev/) and create
-   an application. Copy the identifier it shows, the **Client ID**.
-2. Paste it into **Identifier**, then save. If a secret is shown next to it,
-   paste that into **Secret**. Otherwise leave that field empty.
-3. Click **Link my Yoto account**. Yoto's page opens: sign in with the family
+   an application.
+2. Under the **Link my Yoto account** button, Gladys shows a redirect
+   address. Copy it into the Yoto application and save it there.
+3. Copy that application's **Client ID** into **Identifier**. If a secret is
+   shown as well, paste it into **Secret**. Otherwise leave that field empty.
+   Save the Gladys page.
+4. Click **Link my Yoto account**. Yoto's page opens: sign in with the family
    account and approve the application.
-4. Click **Test the Yoto connection**. Players appear in the Discovery tab.
+5. Click **Test the Yoto connection**. Players appear in the Discovery tab.
 
 The connection stays on by itself. Link the account again only if the Yoto
 password changes, or if the application is removed from the account.
