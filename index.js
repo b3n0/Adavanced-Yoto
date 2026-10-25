@@ -41,8 +41,8 @@ const SIGN_IN_STATUS = {
 };
 
 const LINK_STATUS = {
-  en: 'Paste the redirect address into the Yoto application, save the identifier, then click Link my Yoto account.',
-  fr: 'Collez l’adresse de redirection dans l’application Yoto, enregistrez l’identifiant, puis cliquez sur Lier mon compte Yoto.',
+  en: 'In Allowed Callback URLs, put https://my.gladysassistant.com/redirect/oauth, save the identifier, then click Link my Yoto account.',
+  fr: 'Dans Allowed Callback URLs, mettez https://my.gladysassistant.com/redirect/oauth, enregistrez l’identifiant, puis cliquez sur Lier mon compte Yoto.',
 };
 
 const REVOKED_STATUS = {

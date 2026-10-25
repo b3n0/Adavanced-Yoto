@@ -18,8 +18,8 @@
       "type": "section",
       "label": { "en": "Getting started", "fr": "Pour commencer" },
       "description": {
-        "en": "Open the link and create a Yoto application. In that application, paste the redirect address Gladys shows under the Link my Yoto account button. Copy the Client ID, paste it below, and save. Then click Link my Yoto account and sign in with the family account. Players show up in the Discovery tab. The connection stays on by itself: link the account again only if the Yoto password changes, or if the application is removed from the account.",
-        "fr": "Ouvrez le lien et créez une application Yoto. Dans cette application, collez l'adresse de redirection affichée par Gladys sous le bouton Lier mon compte Yoto. Copiez le Client ID, collez-le ci-dessous, puis enregistrez. Cliquez ensuite sur Lier mon compte Yoto et connectez-vous avec le compte de la famille. Les lecteurs apparaissent dans l'onglet Découverte. La connexion se maintient toute seule : on ne la refait que si le mot de passe Yoto change, ou si l'application est retirée du compte."
+        "en": "On the Yoto site, open Edit Application and keep Application Type on Public Client. In Allowed Callback URLs, erase the example and put only https://my.gladysassistant.com/redirect/oauth. Under Scopes, tick family:devices:control, family:devices:manage, family:view and offline_access. Rights already marked Included automatically are enough. Leave Description, Allowed Logout URLs, Application Logo and Application Privacy Policy URL empty, then click Update Application. Copy the Client ID into Identifier, save, then click Link my Yoto account.",
+        "fr": "Sur le site Yoto, ouvrez Edit Application et laissez Application Type sur Public Client. Dans Allowed Callback URLs, effacez l'exemple et mettez seulement https://my.gladysassistant.com/redirect/oauth. Dans Scopes, cochez family:devices:control, family:devices:manage, family:view et offline_access. Les droits déjà marqués Included automatically suffisent. Laissez vides Description, Allowed Logout URLs, Application Logo et Application Privacy Policy URL, puis cliquez sur Update Application. Copiez le Client ID dans Identifiant, enregistrez, puis cliquez sur Lier mon compte Yoto."
       },
       "links": [
         {
@@ -47,8 +47,8 @@
       "type": "secret",
       "label": { "en": "Secret", "fr": "Secret" },
       "description": {
-        "en": "Only if Yoto shows one next to the identifier. Otherwise leave it empty.",
-        "fr": "Seulement si Yoto en affiche un à côté de l'identifiant. Sinon, laissez vide."
+        "en": "Leave empty. A Public Client has no secret.",
+        "fr": "Laissez vide. Une application Public Client n'a pas de secret."
       },
       "required": false
     },

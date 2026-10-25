@@ -29,16 +29,23 @@ Dans l'éditeur de scènes, ajoutez l'action **Lire une carte Yoto** :
 
 ## Configuration
 
-1. Ouvrez [le site des applications Yoto](https://dashboard.yoto.dev/) et
-   créez une application.
-2. Sous le bouton **Lier mon compte Yoto**, Gladys affiche une adresse de
-   redirection. Copiez-la dans l'application Yoto, puis enregistrez-la là-bas.
-3. Copiez le **Client ID** de cette application dans **Identifiant**. S'il y
-   a aussi un secret, collez-le dans **Secret**. Sinon, laissez ce champ
-   vide. Enregistrez la page Gladys.
-4. Cliquez sur **Lier mon compte Yoto**. La page Yoto s'ouvre : connectez-vous
-   avec le compte de la famille et autorisez l'application.
-5. Cliquez sur **Tester la connexion Yoto**. Les lecteurs apparaissent dans
+Ouvrez [le site des applications Yoto](https://dashboard.yoto.dev/), créez
+une application, puis ouvrez **Edit Application**.
+
+1. **Application Type** : laissez **Public Client**.
+2. **Allowed Callback URLs** : effacez l'exemple et mettez seulement
+   `https://my.gladysassistant.com/redirect/oauth`.
+3. **Scopes** : cochez `family:devices:control`, `family:devices:manage`,
+   `family:view` et `offline_access`. Les droits déjà marqués
+   Included automatically suffisent. Ne cochez pas `family:library:manage`
+   ni `user:content:manage`.
+4. Laissez vides **Description**, **Allowed Logout URLs**, **Application
+   Logo** et **Application Privacy Policy URL**.
+5. Cliquez sur **Update Application**.
+6. Dans Gladys, copiez le **Client ID** dans **Identifiant**. Laissez
+   **Secret** vide, enregistrez, puis cliquez sur **Lier mon compte Yoto**.
+   Connectez-vous avec le compte de la famille.
+7. Cliquez sur **Tester la connexion Yoto**. Les lecteurs apparaissent dans
    l'onglet Découverte.
 
 La connexion se maintient toute seule. On ne la refait que si le mot de passe

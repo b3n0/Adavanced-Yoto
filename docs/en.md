@@ -25,16 +25,23 @@ In the scene editor, add the action **Play a Yoto card**:
 
 ## Configuration
 
-1. Open the [Yoto applications site](https://dashboard.yoto.dev/) and create
-   an application.
-2. Under the **Link my Yoto account** button, Gladys shows a redirect
-   address. Copy it into the Yoto application and save it there.
-3. Copy that application's **Client ID** into **Identifier**. If a secret is
-   shown as well, paste it into **Secret**. Otherwise leave that field empty.
-   Save the Gladys page.
-4. Click **Link my Yoto account**. Yoto's page opens: sign in with the family
-   account and approve the application.
-5. Click **Test the Yoto connection**. Players appear in the Discovery tab.
+Open the [Yoto applications site](https://dashboard.yoto.dev/), create an
+application, then open **Edit Application**.
+
+1. **Application Type**: leave **Public Client**.
+2. **Allowed Callback URLs**: erase the example and put only
+   `https://my.gladysassistant.com/redirect/oauth`.
+3. **Scopes**: tick `family:devices:control`, `family:devices:manage`,
+   `family:view` and `offline_access`. Rights already marked Included
+   automatically are enough. Do not tick `family:library:manage` or
+   `user:content:manage`.
+4. Leave **Description**, **Allowed Logout URLs**, **Application Logo** and
+   **Application Privacy Policy URL** empty.
+5. Click **Update Application**.
+6. In Gladys, copy the **Client ID** into **Identifier**. Leave **Secret**
+   empty, save, then click **Link my Yoto account**. Sign in with the family
+   account.
+7. Click **Test the Yoto connection**. Players appear in the Discovery tab.
 
 The connection stays on by itself. Link the account again only if the Yoto
 password changes, or if the application is removed from the account.

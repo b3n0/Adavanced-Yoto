@@ -21,9 +21,9 @@ La lecture d'une carte est une **action de scène** `play_card` (identifiant de 
 
 ## Configuration
 
-1. Sur [dashboard.yoto.dev](https://dashboard.yoto.dev/), créez une application.
-2. Collez dans cette application l'adresse de redirection affichée par Gladys, puis copiez le Client ID dans **Identifiant** et enregistrez.
-3. Cliquez sur **Lier mon compte Yoto**. Les lecteurs apparaissent dans l'onglet Découverte.
+1. Sur [dashboard.yoto.dev](https://dashboard.yoto.dev/), dans **Allowed Callback URLs**, mettez `https://my.gladysassistant.com/redirect/oauth`.
+2. Cochez `family:devices:control`, `family:devices:manage`, `family:view` et `offline_access`, puis **Update Application**.
+3. Copiez le Client ID dans **Identifiant**, enregistrez, puis cliquez sur **Lier mon compte Yoto**.
 
 La connexion se maintient toute seule. On ne la refait que si le mot de passe Yoto change, ou si l'application est retirée du compte. Le détail est dans `docs/fr.md`.
 

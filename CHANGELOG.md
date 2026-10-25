@@ -10,6 +10,10 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- The configuration screen names the Yoto application fields to fill in: the callback address and the permissions to tick.
+
 ## [1.0.3] - 2026-10-25
 
 ## [1.0.2] - 2026-10-25
