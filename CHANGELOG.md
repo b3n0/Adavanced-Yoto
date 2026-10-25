@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-10-25
+
 ### Changed
 
 - The configuration screen names the Yoto application fields to fill in: the callback address and the permissions to tick.
@@ -42,7 +44,8 @@ the notes of the version's GitHub Release.
 - Demo devices shipped by the Gladys integration template (weather station,
   switch, light, plug, motion sensor, camera, widget).
 
-[Unreleased]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/b3n0/Adavanced-Yoto/releases/tag/v1.0.1

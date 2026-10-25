@@ -1,6 +1,6 @@
 {
   "name": "advanced-yoto",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "Gladys Assistant external integration for the Yoto Player: night light, volume limits and card playback.",
   "type": "module",
