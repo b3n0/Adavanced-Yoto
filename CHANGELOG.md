@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-10-26
+
 ### Added
 
 - Each player reports charging, playback, the card title, ambient light, device temperature, Wi-Fi signal and whether it is online. The card's title, author and cover are the player's now playing.
@@ -63,7 +65,8 @@ the notes of the version's GitHub Release.
 - Demo devices shipped by the Gladys integration template (weather station,
   switch, light, plug, motion sensor, camera, widget).
 
-[Unreleased]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.5...HEAD
+[Unreleased]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.6...HEAD
+[1.0.6]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/b3n0/Adavanced-Yoto/compare/v1.0.2...v1.0.3
