@@ -7,8 +7,14 @@
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
+import { playerStatusOutputs } from './scene-events.js';
 import { YotoClient } from './yoto-client.js';
-import { platformIdFromExternalId } from './devices/yotoPlayer.js';
+import {
+  getSnapshot,
+  platformIdFromExternalId,
+  refreshPlayersNow,
+  yotoPlayer,
+} from './devices/yotoPlayer.js';
 
 const logger = createLogger({ name: 'scenes' });
 
@@ -25,5 +31,28 @@ export const SCENE_ACTIONS = {
       fields.track_index ?? 0,
     );
     return { playing: true };
+  },
+
+  async get_player_status(gladys, { fields, config, session }) {
+    const deviceId = platformIdFromExternalId(fields.player);
+    if (!deviceId) {
+      throw new Error('Choose a Yoto player');
+    }
+    logger.info(`Scene action get_player_status <- ${deviceId}`);
+    await yotoPlayer.onPoll(gladys, {
+      device: { external_id: fields.player },
+      config,
+      session,
+    });
+    const snapshot = getSnapshot(deviceId);
+    if (!snapshot) {
+      throw new Error('The Yoto player could not be read');
+    }
+    return playerStatusOutputs(snapshot);
+  },
+
+  async refresh_players(gladys, context) {
+    const count = await refreshPlayersNow(gladys, context);
+    return { count };
   },
 };

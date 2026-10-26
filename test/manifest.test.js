@@ -10,6 +10,7 @@ import { readFile } from 'node:fs/promises';
 import { DEVICE_BLUEPRINTS, SCENE_TRIGGER_KEYS } from '../src/devices/index.js';
 import { SCENE_ACTIONS } from '../src/scenes.js';
 import { DEFAULT_CONFIG } from '../src/config.js';
+import { WIDGET } from '../src/surfaces.js';
 
 const manifest = JSON.parse(
   await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
@@ -99,8 +100,14 @@ test('every scene_actions key has an onSceneAction handler, and vice versa', () 
   }
 });
 
-test('this integration does not declare a dashboard widget', () => {
-  assert.equal(manifest.widgets, undefined);
+test('every widget key has a content builder, and vice versa', () => {
+  const declared = keysOf(manifest.widgets);
+  for (const key of Object.values(WIDGET)) {
+    assert.ok(declared.includes(key), `widget "${key}" has no manifest entry`);
+  }
+  for (const key of declared) {
+    assert.ok(Object.values(WIDGET).includes(key), `widget "${key}" is declared but not built`);
+  }
 });
 
 test('every scene trigger the code fires is declared in scene_triggers, and vice versa', () => {

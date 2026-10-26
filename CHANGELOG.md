@@ -10,6 +10,19 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Each player reports charging, playback, the card title, ambient light, device temperature, Wi-Fi signal and whether it is online. The card's title, author and cover are the player's now playing.
+- Dashboard widgets for every player and for one player.
+- Scene triggers when a card starts, when playback stops, and when the battery drops under 20%.
+- Scene actions to read one player now and to refresh every player. The configuration screen can refresh every player too.
+- A reading can ask the player for a fresh status before using the last report.
+
+### Changed
+
+- Volume and the day and night limits are percentages from 0 to 100. The limits are still stored on the player as its 0–16 knob step.
+- Gladys 5.3.0 or later is required.
+
 ## [1.0.5] - 2026-10-25
 
 ### Fixed

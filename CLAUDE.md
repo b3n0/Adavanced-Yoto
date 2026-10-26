@@ -35,9 +35,13 @@ index.js                          SDK wiring only: handlers registered before co
 src/yoto-auth.js                  OAuth2 sign-in (authorization code, PKCE) and refresh-token renewal
 src/yoto-session.js               single in-flight access-token renewal
 src/yoto-client.js                Yoto REST client (Bearer token, never logged)
+src/yoto-status.js                firmware status block -> Gladys values
 src/devices/index.js              registry of the device blueprints + poll dispatch
 src/devices/yotoPlayer.js         Yoto Player device (buildDevice, onPoll, onSetValue)
-src/scenes.js                     scene action: play a card
+src/scene-events.js               scene triggers between two polls
+src/scenes.js                     scene actions: play a card, read a player, refresh
+src/widgets.js                    dashboard widgets, drawn from the last poll
+src/surfaces.js                   widget and scene-trigger keys (forever)
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
 docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)

@@ -15,7 +15,7 @@ import {
 import { FEATURE, resetPlayerRuntime, setKnownPlayers } from '../src/devices/yotoPlayer.js';
 import { normalizeConfig } from '../src/config.js';
 
-const config = normalizeConfig({ access_token: 'secret-token' });
+const config = normalizeConfig({ access_token: 'secret-token', request_status_push: false });
 
 function seedPlayers() {
   resetPlayerRuntime();
@@ -80,6 +80,17 @@ test('a player declares the Yoto features Gladys can address', () => {
   assert.equal(battery.read_only, true);
   assert.equal(battery.min, 0);
   assert.equal(battery.max, 100);
+  const volume = device.features.find((item) => item.external_id.endsWith(`:${FEATURE.VOLUME}`));
+  assert.equal(volume.min, 0);
+  assert.equal(volume.max, 100);
+  assert.equal(volume.unit, 'percent');
+  const charging = device.features.find((item) => item.external_id.endsWith(FEATURE.CHARGING));
+  assert.equal(charging.category, 'input');
+  assert.equal(charging.min, 0);
+  assert.equal(charging.max, 1);
+  const card = device.features.find((item) => item.external_id.endsWith(FEATURE.CARD));
+  assert.equal(card.min, 0);
+  assert.equal(card.max, 0);
   const limits = device.features.filter(
     (item) =>
       item.external_id.endsWith(FEATURE.VOLUME_LIMIT_DAY) ||
@@ -114,7 +125,11 @@ test('the poller reads a player at the refresh interval of the config', async (t
   const gladys = createFakeGladys();
   const pollDevice = createPoller();
   const player = { external_id: DEVICE_BLUEPRINTS[0].deviceExternalId(gladys, 'player-1') };
-  const everyFiveMinutes = normalizeConfig({ access_token: 'secret-token', poll_frequency: 300 });
+  const everyFiveMinutes = normalizeConfig({
+    access_token: 'secret-token',
+    poll_frequency: 300,
+    request_status_push: false,
+  });
   t.mock.method(globalThis, 'fetch', async () => ({
     ok: true,
     status: 200,

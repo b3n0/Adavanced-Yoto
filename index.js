@@ -22,11 +22,19 @@ import {
   findBlueprintByDevice,
   getKnownPlayers,
 } from './src/devices/index.js';
-import { yotoPlayer } from './src/devices/yotoPlayer.js';
 import { SCENE_ACTIONS } from './src/scenes.js';
+import { WIDGET, WIDGET_ACTION_REFRESH } from './src/surfaces.js';
+import { buildPlayerContent, buildPlayersContent } from './src/widgets.js';
 import { createAuthorizationRequest, exchangeAuthorizationCode } from './src/yoto-auth.js';
 import { YotoAuthError, YotoClient } from './src/yoto-client.js';
 import { YotoSession } from './src/yoto-session.js';
+import {
+  getSnapshot,
+  getSnapshots,
+  platformIdFromExternalId,
+  refreshPlayersNow,
+  yotoPlayer,
+} from './src/devices/yotoPlayer.js';
 
 const gladys = new GladysIntegration();
 
@@ -127,6 +135,49 @@ for (const blueprint of DEVICE_BLUEPRINTS) {
 
 for (const [actionKey, handler] of Object.entries(SCENE_ACTIONS)) {
   gladys.onSceneAction(actionKey, (fields) => handler(gladys, { fields, config, session }));
+}
+
+gladys.onWidgetGet(WIDGET.PLAYERS, async () =>
+  buildPlayersContent(getKnownPlayers(), getSnapshots()),
+);
+
+gladys.onWidgetGet(WIDGET.PLAYER, async ({ settings }) => {
+  const deviceId = platformIdFromExternalId(settings?.player);
+  const player = getKnownPlayers().find((item) => item.deviceId === deviceId) ?? null;
+  return buildPlayerContent(gladys, player, deviceId ? getSnapshot(deviceId) : undefined);
+});
+
+gladys.onWidgetAction(WIDGET.PLAYERS, async (actionKey) => {
+  assertWidgetAction(actionKey);
+  const count = await refreshPlayersNow(gladys, { config, session });
+  return {
+    en: `${count} player(s) refreshed.`,
+    fr: `${count} lecteur(s) rafraîchi(s).`,
+  };
+});
+
+gladys.onWidgetAction(WIDGET.PLAYER, async (actionKey, _params, { settings }) => {
+  assertWidgetAction(actionKey);
+  const deviceId = platformIdFromExternalId(settings?.player);
+  const player = getKnownPlayers().find((item) => item.deviceId === deviceId);
+  if (!player) {
+    throw new Error('This Yoto player is no longer on the account.');
+  }
+  await yotoPlayer.onPoll(gladys, {
+    device: { external_id: yotoPlayer.deviceExternalId(gladys, player.deviceId) },
+    config,
+    session,
+  });
+  return {
+    en: `${player.name} refreshed.`,
+    fr: `${player.name} rafraîchi.`,
+  };
+});
+
+function assertWidgetAction(actionKey) {
+  if (actionKey !== WIDGET_ACTION_REFRESH) {
+    throw new Error(`Unknown widget action "${actionKey}"`);
+  }
 }
 
 gladys.onConfigUpdated(async (newConfig) => {

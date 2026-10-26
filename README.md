@@ -7,17 +7,22 @@ Elle parle à l'API `https://api.yotoplay.com`. Le compte Yoto se lie une fois, 
 
 Pour chaque lecteur du compte :
 
-| Fonctionnalité  | Catégorie Gladys       | Commande Yoto                                       |
-| --------------- | ---------------------- | --------------------------------------------------- |
-| Veilleuse       | `light` / `binary`     | couleur d'ambiance du profil actif (`#0` = éteinte) |
-| Couleur         | `light` / `color`      | même couleur, entier Gladys converti en hex         |
-| Luminosité      | `light` / `brightness` | luminosité d'écran du profil jour ou nuit (0–100)   |
-| Volume          | `music` / `volume`     | molette 0–16, envoyée en pourcentage                |
-| Volume max jour | `music` / `volume`     | `maxVolumeLimit`                                    |
-| Volume max nuit | `music` / `volume`     | `nightMaxVolumeLimit`                               |
-| Batterie        | `battery` / `integer`  | lecture seule, ombre de configuration               |
+| Fonctionnalité       | Catégorie Gladys           | Commande Yoto                                       |
+| -------------------- | -------------------------- | --------------------------------------------------- |
+| Veilleuse            | `light` / `binary`         | couleur d'ambiance du profil actif (`#0` = éteinte) |
+| Couleur              | `light` / `color`          | même couleur, entier Gladys converti en hex         |
+| Luminosité           | `light` / `brightness`     | luminosité d'écran du profil jour ou nuit (0–100)   |
+| Volume               | `music` / `volume`         | pourcentage 0–100, envoyé tel quel                  |
+| Volume max jour      | `music` / `volume`         | `maxVolumeLimit`, cran 0–16 affiché en pourcentage  |
+| Volume max nuit      | `music` / `volume`         | `nightMaxVolumeLimit`, même conversion              |
+| Batterie             | `battery` / `integer`      | lecture seule                                       |
+| En charge, en ligne  | `input` / `binary`         | lecture seule (`powerSrc`, `device.online`)         |
+| Lecture              | `music` / `playback_state` | carte ou flux chargé                                |
+| Carte, titre, auteur | `text` et `music`          | `activeCard`, puis `GET /card/{id}`                 |
+| Lumière, température | capteurs                   | `als`, `temp`                                       |
+| Signal Wi-Fi         | `signal`                   | `wifiStrength`, en dBm                              |
 
-La lecture d'une carte est une **action de scène** `play_card` (identifiant de carte + index de piste). Une fonctionnalité Gladys ne porte qu'un nombre, pas un identifiant de carte.
+La lecture d'une carte est une **action de scène** `play_card`. Les déclencheurs `card_started`, `card_stopped` et `battery_low`, les actions `get_player_status` et `refresh_players`, et les widgets `players` et `player` complètent les commandes. Gladys 5.3 ou plus récent est nécessaire.
 
 ## Configuration
 

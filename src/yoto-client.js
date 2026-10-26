@@ -147,6 +147,23 @@ export class YotoClient {
     return this.#request('GET', `/device-v2/${encodeURIComponent(deviceId)}/config`);
   }
 
+  // The player answers over MQTT; the cloud then stores the report we read.
+  async requestStatusPush(deviceId) {
+    await this.#request('POST', `/device-v2/${encodeURIComponent(deviceId)}/command/status`, {});
+  }
+
+  // Title, author and cover. A missing field stays null. Needs family:library:view.
+  async getCard(cardId) {
+    const payload = await this.#request('GET', `/card/${encodeURIComponent(cardId)}`);
+    const card = payload?.card ?? payload ?? {};
+    const metadata = card.metadata ?? {};
+    return {
+      title: nonEmpty(card.title) ?? nonEmpty(metadata.title),
+      author: nonEmpty(metadata.author),
+      coverUrl: httpsUrl(metadata.cover?.imageL),
+    };
+  }
+
   // Re-reads first: a partial PUT would reset every setting it does not repeat.
   async updateSettings(deviceId, partial) {
     const current = await this.getConfig(deviceId);
@@ -267,6 +284,15 @@ function redact(text, token) {
     return value;
   }
   return value.split(token).join('[redacted]');
+}
+
+function nonEmpty(value) {
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
+}
+
+function httpsUrl(value) {
+  const url = nonEmpty(value);
+  return url !== null && url.startsWith('https://') ? url : null;
 }
 
 function cardUri(cardId) {

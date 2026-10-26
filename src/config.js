@@ -17,6 +17,9 @@ export const DEFAULT_CONFIG = {
   // Seconds between two reads. Gladys polls at most once a minute; slower
   // intervals are applied by skipping polls (createPoller).
   poll_frequency: 300,
+  // Ask the player to report before each reading. The cloud shadow otherwise
+  // keeps the previous report, which can be many minutes old.
+  request_status_push: true,
 };
 
 /**
@@ -33,8 +36,17 @@ export function normalizeConfig(raw = {}) {
     access_token: text(raw.access_token),
     refresh_token: text(raw.refresh_token),
     token_expires_at: Number.isFinite(expires) ? expires : 0,
-    poll_frequency: Number(raw.poll_frequency ?? DEFAULT_CONFIG.poll_frequency),
+    poll_frequency: clampPollFrequency(raw.poll_frequency),
+    request_status_push: raw.request_status_push !== false && raw.request_status_push !== 'false',
   };
+}
+
+function clampPollFrequency(value) {
+  const seconds = Number(value ?? DEFAULT_CONFIG.poll_frequency);
+  if (!Number.isFinite(seconds)) {
+    return DEFAULT_CONFIG.poll_frequency;
+  }
+  return Math.min(3600, Math.max(60, Math.round(seconds)));
 }
 
 function text(value) {

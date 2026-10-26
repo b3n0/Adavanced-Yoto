@@ -5,7 +5,7 @@ import { FEATURE, resetPlayerRuntime, yotoPlayer } from '../src/devices/yotoPlay
 import { normalizeConfig } from '../src/config.js';
 
 const TOKEN = 'super-secret-token';
-const config = normalizeConfig({ access_token: TOKEN });
+const config = normalizeConfig({ access_token: TOKEN, request_status_push: false });
 
 function playerFixture(gladys) {
   return {
@@ -36,7 +36,7 @@ const CONFIG_BODY = {
   },
 };
 
-test('polling publishes battery, the knob step and the active night light', async (t) => {
+test('polling publishes battery, the volume percent and the active night light', async (t) => {
   resetPlayerRuntime();
   const gladys = createFakeGladys();
   const player = playerFixture(gladys);
@@ -50,10 +50,10 @@ test('polling publishes battery, the knob step and the active night light', asyn
 
   const ids = gladys.externalIds('yoto-player', 'abc');
   assert.equal(gladys.fake.lastState(ids.feature(FEATURE.BATTERY)), 77);
-  assert.equal(gladys.fake.lastState(ids.feature(FEATURE.VOLUME)), 8);
+  assert.equal(gladys.fake.lastState(ids.feature(FEATURE.VOLUME)), 50);
   assert.equal(gladys.fake.lastState(ids.feature(FEATURE.NIGHTLIGHT)), 1);
-  assert.equal(gladys.fake.lastState(ids.feature(FEATURE.VOLUME_LIMIT_DAY)), 4);
-  assert.equal(gladys.fake.lastState(ids.feature(FEATURE.VOLUME_LIMIT_NIGHT)), 2);
+  assert.equal(gladys.fake.lastState(ids.feature(FEATURE.VOLUME_LIMIT_DAY)), 25);
+  assert.equal(gladys.fake.lastState(ids.feature(FEATURE.VOLUME_LIMIT_NIGHT)), 13);
   assert.equal(gladys.fake.lastState(ids.feature(FEATURE.BRIGHTNESS)), 100);
 });
 
@@ -68,12 +68,12 @@ test('setting the volume posts the matching percent', async (t) => {
   });
 
   const feature = player.feature(FEATURE.VOLUME);
-  await yotoPlayer.onSetValue(gladys, { device: player.device, feature, value: 8, config });
+  await yotoPlayer.onSetValue(gladys, { device: player.device, feature, value: 50, config });
 
   assert.equal(calls.length, 1);
   assert.match(calls[0].url, /\/command\/volume\/set$/);
   assert.deepEqual(calls[0].body, { volume: 50 });
-  assert.equal(gladys.fake.lastState(feature.external_id), 8);
+  assert.equal(gladys.fake.lastState(feature.external_id), 50);
   assert.equal(calls[0].url.includes(TOKEN), false);
 });
 
@@ -95,13 +95,13 @@ test('the day volume limit is merged into maxVolumeLimit', async (t) => {
   });
 
   const feature = player.feature(FEATURE.VOLUME_LIMIT_DAY);
-  await yotoPlayer.onSetValue(gladys, { device: player.device, feature, value: 8, config });
+  await yotoPlayer.onSetValue(gladys, { device: player.device, feature, value: 50, config });
 
   const put = calls.find((call) => call.method === 'PUT');
   assert.equal(put.body.config.maxVolumeLimit, '8');
   assert.deepEqual(put.body.config.alarms, ['keep-me']);
   assert.equal(put.body.config.nightMaxVolumeLimit, '2');
-  assert.equal(gladys.fake.lastState(feature.external_id), 8);
+  assert.equal(gladys.fake.lastState(feature.external_id), 50);
 });
 
 test('a colour writes the night profile and the live ring when the player is in night mode', async (t) => {
